@@ -24,7 +24,7 @@ const Register = () => {
         setLoading(true);
         setError('');
         try {
-            await axios.post('http://localhost:5000/api/auth/register', formData);
+            await axios.post('http://localhost:5001/api/auth/register', formData);
             navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
         } catch (err) {
             setError(err.response?.data?.message || 'Registration failed');

@@ -14,7 +14,8 @@ const Profile = () => {
     const [bidsLoading, setBidsLoading] = useState(false);
     const [bidsError, setBidsError] = useState('');
 
-    const [kycFile, setKycFile] = useState(null);
+    const [kycNidFile, setKycNidFile] = useState(null);
+    const [kycTaxFile, setKycTaxFile] = useState(null);
     const [kycLoading, setKycLoading] = useState(false);
 
     // Payment State
@@ -44,8 +45,8 @@ const Profile = () => {
                 const token = localStorage.getItem('token');
                 
                 const [userRes, pitchesRes] = await Promise.all([
-                    axios.get('http://localhost:5000/api/auth/me', { headers: { 'Authorization': `Bearer ${token}` } }),
-                    axios.get('http://localhost:5000/api/pitches/mine', { headers: { 'Authorization': `Bearer ${token}` } })
+                    axios.get('http://localhost:5001/api/auth/me', { headers: { 'Authorization': `Bearer ${token}` } }),
+                    axios.get('http://localhost:5001/api/pitches/mine', { headers: { 'Authorization': `Bearer ${token}` } })
                 ]);
                 
                 setUser(userRes.data);
@@ -53,7 +54,7 @@ const Profile = () => {
 
                 // Fetch Role Profile
                 try {
-                    const profileRes = await axios.get('http://localhost:5000/api/profiles/me', { headers: { 'Authorization': `Bearer ${token}` } });
+                    const profileRes = await axios.get('http://localhost:5001/api/profiles/me', { headers: { 'Authorization': `Bearer ${token}` } });
                     if (profileRes.data.profile) {
                         setProfile(profileRes.data.profile);
                         setFormData(profileRes.data.profile);
@@ -92,7 +93,7 @@ const Profile = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.get(`http://localhost:5000/api/bids/pitch/${pitchId}`, {
+            const res = await axios.get(`http://localhost:5001/api/bids/pitch/${pitchId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             setActivePitchBids(res.data);
@@ -105,21 +106,23 @@ const Profile = () => {
 
     const handleKycSubmit = async (e) => {
         e.preventDefault();
-        if (!kycFile) return;
+        if (!kycNidFile || !kycTaxFile) return;
 
         setKycLoading(true);
         const fd = new FormData();
-        fd.append('kycVideo', kycFile);
+        fd.append('nid', kycNidFile);
+        fd.append('taxDocument', kycTaxFile);
 
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.put('http://localhost:5000/api/auth/kyc-upload', fd, {
+            const res = await axios.put('http://localhost:5001/api/auth/kyc-upload', fd, {
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
             });
             setUser(res.data);
-            setKycFile(null);
+            setKycNidFile(null);
+            setKycTaxFile(null);
         } catch (err) {
-            alert(err.response?.data?.message || 'Error uploading KYC video');
+            alert(err.response?.data?.message || 'Error uploading KYC documents');
         } finally {
             setKycLoading(false);
         }
@@ -131,7 +134,7 @@ const Profile = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.post('http://localhost:5000/api/payment/init', {}, {
+            const res = await axios.post('http://localhost:5001/api/payment/init', {}, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -149,7 +152,7 @@ const Profile = () => {
     const handleLike = async (pitchId) => {
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.put(`http://localhost:5000/api/pitches/${pitchId}/like`, {}, {
+            const res = await axios.put(`http://localhost:5001/api/pitches/${pitchId}/like`, {}, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -185,7 +188,7 @@ const Profile = () => {
         if (fileData.pitchDeck) fd.append('pitchDeck', fileData.pitchDeck);
 
         try {
-            const res = await axios.put('http://localhost:5000/api/profiles/me', fd, {
+            const res = await axios.put('http://localhost:5001/api/profiles/me', fd, {
                 headers: { 
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'multipart/form-data'
@@ -444,8 +447,8 @@ const Profile = () => {
                                                 </svg>
                                             </div>
                                             <div className="ml-3">
-                                                <h3 className="text-sm font-bold text-blue-800">Video Approved! Action Required.</h3>
-                                                <p className="text-sm text-blue-700 mt-1">Your video passed our checks. Please pay the one-time verification fee to unlock your green badge.</p>
+                                                <h3 className="text-sm font-bold text-blue-800">Documents Approved! Action Required.</h3>
+                                                <p className="text-sm text-blue-700 mt-1">Your documents passed our checks. Please pay the one-time verification fee to unlock your green badge.</p>
                                             </div>
                                         </div>
                                         <button
@@ -482,7 +485,7 @@ const Profile = () => {
                                             </div>
                                             <div className="ml-3">
                                                 <h3 className="text-sm font-medium text-yellow-800">Under Review</h3>
-                                                <p className="text-sm text-yellow-700 mt-1">Your KYC video is currently being reviewed by our team.</p>
+                                                <p className="text-sm text-yellow-700 mt-1">Your KYC documents are currently being reviewed by our team.</p>
                                             </div>
                                         </div>
                                     </div>
@@ -497,7 +500,7 @@ const Profile = () => {
                                             </div>
                                             <div className="ml-3">
                                                 <h3 className="text-sm font-medium text-red-800">Verification Rejected</h3>
-                                                <p className="text-sm text-red-700 mt-1">Your previous KYC submission was rejected. Please upload a clear video of yourself.</p>
+                                                <p className="text-sm text-red-700 mt-1">Your previous KYC submission was rejected. Please upload clear copies of your documents.</p>
                                             </div>
                                         </div>
                                     </div>
@@ -508,25 +511,35 @@ const Profile = () => {
                         {/* KYC Upload Form */}
                         {(user.verificationStatus === 'unverified' || user.verificationStatus === 'rejected') && !user.isVerified && (
                             <div className="mt-6 bg-white p-6 rounded-xl shadow-md border border-gray-100">
-                                <h3 className="text-lg font-bold text-gray-800 mb-2">Upload KYC Video</h3>
-                                <p className="text-sm text-gray-600 mb-4">To ensure trust on VentureHive, we require a short video of you stating your full name and acknowledging your registration.</p>
+                                <h3 className="text-lg font-bold text-gray-800 mb-2">Upload KYC Documents</h3>
+                                <p className="text-sm text-gray-600 mb-4">To ensure trust on VentureHive, we require copies of your National ID and Tax Document.</p>
                                 <form onSubmit={handleKycSubmit} className="flex flex-col gap-4 max-w-lg">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Select Video (MP4, AVI, MOV)</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">National ID (PDF, JPG, PNG)</label>
                                         <input
                                             type="file"
-                                            accept="video/*"
-                                            onChange={(e) => setKycFile(e.target.files[0])}
+                                            accept="image/*,.pdf"
+                                            onChange={(e) => setKycNidFile(e.target.files[0])}
+                                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border border-gray-200 rounded-lg p-2 transition-colors"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Tax Document (PDF, JPG, PNG)</label>
+                                        <input
+                                            type="file"
+                                            accept="image/*,.pdf"
+                                            onChange={(e) => setKycTaxFile(e.target.files[0])}
                                             className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border border-gray-200 rounded-lg p-2 transition-colors"
                                             required
                                         />
                                     </div>
                                     <button
                                         type="submit"
-                                        disabled={!kycFile || kycLoading}
-                                        className={`self-start px-6 py-2.5 rounded-lg text-white font-medium shadow-sm transition-colors ${!kycFile || kycLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+                                        disabled={!kycNidFile || !kycTaxFile || kycLoading}
+                                        className={`self-start px-6 py-2.5 rounded-lg text-white font-medium shadow-sm transition-colors ${!kycNidFile || !kycTaxFile || kycLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
                                     >
-                                        {kycLoading ? 'Uploading User Video...' : 'Submit Verification Video'}
+                                        {kycLoading ? 'Uploading Documents...' : 'Submit Verification Documents'}
                                     </button>
                                 </form>
                             </div>
@@ -638,6 +651,12 @@ const Profile = () => {
                                                             <div>
                                                                 <span className="font-semibold text-gray-800">{bid.investorId?.name || 'Unknown Investor'}</span>
                                                                 <p className="text-xs text-gray-500 mt-1">Requested <span className="font-medium text-gray-700">{bid.offerEquity}%</span> equity</p>
+                                                                {bid.termsAndConditions && (
+                                                                    <p className="text-xs text-gray-600 mt-2 bg-white p-2 rounded border border-gray-100 italic">
+                                                                        <span className="font-semibold text-gray-500 not-italic block mb-0.5">Terms:</span>
+                                                                        {bid.termsAndConditions}
+                                                                    </p>
+                                                                )}
                                                             </div>
                                                             <div className="font-bold text-green-600 text-base">
                                                                 ${bid.offerAmount ? bid.offerAmount.toLocaleString() : '0'}
