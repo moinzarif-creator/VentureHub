@@ -5,6 +5,7 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('../config/cloudinary');
 const authMiddleware = require('../middleware/authMiddleware');
 const Pitch = require('../models/Pitch');
+const generateEmbedding = require('../utils/generateEmbedding');
 
 // Configure Multer Storage for Cloudinary
 const storage = new CloudinaryStorage({
@@ -40,6 +41,10 @@ router.post('/', authMiddleware, upload.array('media', 5), async (req, res) => {
             parsedTags = tags;
         }
 
+        // Generate Embedding for AI Search
+        const textToEmbed = `${title} ${category} ${problem} ${solution} ${parsedTags.join(' ')}`;
+        const embedding = await generateEmbedding(textToEmbed);
+
         // Create Pitch
         const newPitch = new Pitch({
             entrepreneurId: req.user.id,
@@ -55,7 +60,8 @@ router.post('/', authMiddleware, upload.array('media', 5), async (req, res) => {
                 equityOffered: Number(equityOffered),
                 isPrivate: isPrivate === 'true' || isPrivate === true
             },
-            tags: parsedTags
+            tags: parsedTags,
+            embedding
         });
 
         const savedPitch = await newPitch.save();
@@ -89,13 +95,21 @@ router.get('/', authMiddleware, async (req, res) => {
         const { search, minAsk, maxAsk, tag } = req.query;
         let query = {};
 
-        // 1. Keyword Search (Title or Content)
+        let queryEmbedding = [];
+        let vectorSearchMode = false;
+
+        // 1. Keyword Search (AI Semantic Search fallback to Text)
         if (search) {
-            query.$or = [
-                { title: { $regex: search, $options: 'i' } },
-                { 'content.problem': { $regex: search, $options: 'i' } },
-                { 'content.solution': { $regex: search, $options: 'i' } }
-            ];
+            queryEmbedding = await generateEmbedding(search);
+            if (queryEmbedding && queryEmbedding.length > 0) {
+                vectorSearchMode = true;
+            } else {
+                query.$or = [
+                    { title: { $regex: search, $options: 'i' } },
+                    { 'content.problem': { $regex: search, $options: 'i' } },
+                    { 'content.solution': { $regex: search, $options: 'i' } }
+                ];
+            }
         }
 
         // 2. Financial Filter (Ask Amount)
@@ -105,14 +119,44 @@ router.get('/', authMiddleware, async (req, res) => {
             if (maxAsk) query['financials.askAmount'].$lte = Number(maxAsk);
         }
 
+        // 3. Category Filter
+        if (req.query.category) {
+            query.category = req.query.category;
+        }
+
         // 3. Tag Filter
         if (tag) {
             query.tags = { $regex: new RegExp(`^${tag}$`, 'i') }; // Exact case-insensitive match inside array
         }
 
-        const pitches = await Pitch.find(query)
-            .populate('entrepreneurId', 'name')
-            .sort({ createdAt: -1 });
+        let pitches = await Pitch.find(query).populate('entrepreneurId', 'name');
+
+        if (vectorSearchMode) {
+            const cosineSimilarity = (vecA, vecB) => {
+               if (!vecA || !vecB || vecA.length !== vecB.length) return 0;
+               let dotProduct = 0;
+               let normA = 0;
+               let normB = 0;
+               for (let i = 0; i < vecA.length; i++) {
+                   dotProduct += vecA[i] * vecB[i];
+                   normA += vecA[i] * vecA[i];
+                   normB += vecB[i] * vecB[i];
+               }
+               if (normA === 0 || normB === 0) return 0;
+               return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+           };
+           
+           pitches = pitches.map(p => {
+               const pitchObj = p.toObject();
+               pitchObj.similarity = cosineSimilarity(queryEmbedding, p.embedding);
+               return pitchObj;
+           });
+           
+           pitches = pitches.filter(p => p.similarity > 0.25)
+                            .sort((a, b) => b.similarity - a.similarity);
+        } else {
+            pitches.sort((a, b) => b.createdAt - a.createdAt);
+        }
 
         res.json(pitches);
     } catch (error) {

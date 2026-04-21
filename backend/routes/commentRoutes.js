@@ -22,8 +22,8 @@ router.post('/', authMiddleware, async (req, res) => {
 
         let savedComment = await newComment.save();
 
-        // Populate the author's name before returning the newly created comment
-        savedComment = await savedComment.populate('author', 'name');
+        // Populate the author's name and role before returning the newly created comment
+        savedComment = await savedComment.populate('author', 'name role');
 
         res.status(201).json(savedComment);
     } catch (error) {
@@ -38,7 +38,7 @@ router.post('/', authMiddleware, async (req, res) => {
 router.get('/pitch/:pitchId', authMiddleware, async (req, res) => {
     try {
         const comments = await Comment.find({ pitchId: req.params.pitchId })
-            .populate('author', 'name')
+            .populate('author', 'name role')
             .sort({ createdAt: 1 }); // Oldest to newest
 
         res.json(comments);
