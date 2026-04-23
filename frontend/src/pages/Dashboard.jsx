@@ -36,7 +36,7 @@ const Dashboard = () => {
             if (selectedTag) params.tag = selectedTag;
             if (selectedCategory) params.category = selectedCategory;
 
-            const res = await axios.get('http://localhost:5001/api/pitches', {
+            const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/pitches`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },
@@ -75,7 +75,7 @@ const Dashboard = () => {
 
         try {
             const token = localStorage.getItem('token');
-            await axios.post('http://localhost:5001/api/bids',
+            await axios.post(`${import.meta.env.VITE_API_URL}/api/bids`,
                 { pitchId, ...bidData },
                 { headers: { 'Authorization': `Bearer ${token}` } }
             );
@@ -95,7 +95,7 @@ const Dashboard = () => {
     const handleLike = async (pitchId) => {
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.put(`http://localhost:5001/api/pitches/${pitchId}/like`, {}, {
+            const res = await axios.put(`${import.meta.env.VITE_API_URL}/api/pitches/${pitchId}/like`, {}, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -129,7 +129,7 @@ const Dashboard = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.get(`http://localhost:5001/api/comments/pitch/${pitchId}`, {
+            const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/comments/pitch/${pitchId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             setActivePitchComments(res.data);
@@ -146,7 +146,7 @@ const Dashboard = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.post(`http://localhost:5001/api/comments`,
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/comments`,
                 { text: newCommentText, pitchId },
                 { headers: { 'Authorization': `Bearer ${token}` } }
             );

@@ -45,8 +45,8 @@ const Profile = () => {
                 const token = localStorage.getItem('token');
                 
                 const [userRes, pitchesRes] = await Promise.all([
-                    axios.get('http://localhost:5001/api/auth/me', { headers: { 'Authorization': `Bearer ${token}` } }),
-                    axios.get('http://localhost:5001/api/pitches/mine', { headers: { 'Authorization': `Bearer ${token}` } })
+                    axios.get(`${import.meta.env.VITE_API_URL}/api/auth/me`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                    axios.get(`${import.meta.env.VITE_API_URL}/api/pitches/mine`, { headers: { 'Authorization': `Bearer ${token}` } })
                 ]);
                 
                 setUser(userRes.data);
@@ -54,7 +54,7 @@ const Profile = () => {
 
                 // Fetch Role Profile
                 try {
-                    const profileRes = await axios.get('http://localhost:5001/api/profiles/me', { headers: { 'Authorization': `Bearer ${token}` } });
+                    const profileRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/profiles/me`, { headers: { 'Authorization': `Bearer ${token}` } });
                     if (profileRes.data.profile) {
                         setProfile(profileRes.data.profile);
                         setFormData(profileRes.data.profile);
@@ -93,7 +93,7 @@ const Profile = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.get(`http://localhost:5001/api/bids/pitch/${pitchId}`, {
+            const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/bids/pitch/${pitchId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             setActivePitchBids(res.data);
@@ -115,7 +115,7 @@ const Profile = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.put('http://localhost:5001/api/auth/kyc-upload', fd, {
+            const res = await axios.put(`${import.meta.env.VITE_API_URL}/api/auth/kyc-upload`, fd, {
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
             });
             setUser(res.data);
@@ -134,7 +134,7 @@ const Profile = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.post('http://localhost:5001/api/payment/init', {}, {
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/payment/init`, {}, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -152,7 +152,7 @@ const Profile = () => {
     const handleLike = async (pitchId) => {
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.put(`http://localhost:5001/api/pitches/${pitchId}/like`, {}, {
+            const res = await axios.put(`${import.meta.env.VITE_API_URL}/api/pitches/${pitchId}/like`, {}, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -188,7 +188,7 @@ const Profile = () => {
         if (fileData.pitchDeck) fd.append('pitchDeck', fileData.pitchDeck);
 
         try {
-            const res = await axios.put('http://localhost:5001/api/profiles/me', fd, {
+            const res = await axios.put(`${import.meta.env.VITE_API_URL}/api/profiles/me`, fd, {
                 headers: { 
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'multipart/form-data'
