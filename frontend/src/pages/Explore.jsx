@@ -12,7 +12,7 @@ const Explore = () => {
         const fetchUsers = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const res = await axios.get('http://localhost:5000/api/explore/matches', {
+                const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/explore/matches`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 setUsers(res.data);

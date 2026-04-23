@@ -12,7 +12,7 @@ const PublicProfile = () => {
     useEffect(() => {
         const fetchProfile = async () => {
             try {
-                const res = await axios.get(`http://localhost:5000/api/profiles/public/${id}`);
+                const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/profiles/public/${id}`);
                 setUserData(res.data.user);
                 setProfileData(res.data.profile);
             } catch (err) {

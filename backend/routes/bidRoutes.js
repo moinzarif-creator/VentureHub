@@ -4,11 +4,11 @@ const Bid = require('../models/Bid');
 const authMiddleware = require('../middleware/authMiddleware');
 
 // @route   POST /api/bids
-// @desc    Place a new bid on a pitch
-// @access  Private (Investors usually, but leaving open to authenticated users for now)
+// @desc    Submit a bid (Term Sheet)
+// @access  Private (Investors)
 router.post('/', authMiddleware, async (req, res) => {
     try {
-        const { pitchId, bidAmount, equityRequested } = req.body;
+        const { pitchId, bidAmount, equityRequested, termsAndConditions } = req.body;
         const investorId = req.user.id; // Extracted from JWT token via authMiddleware
 
         // Basic validation
@@ -20,8 +20,9 @@ router.post('/', authMiddleware, async (req, res) => {
         const newBid = new Bid({
             pitchId,
             investorId,
-            offerAmount: bidAmount,
-            offerEquity: equityRequested
+            offerAmount: Number(bidAmount),
+            offerEquity: Number(equityRequested),
+            termsAndConditions
         });
 
         // Save to database

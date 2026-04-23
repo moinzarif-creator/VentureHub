@@ -23,10 +23,10 @@ router.post('/init', authMiddleware, async (req, res) => {
             total_amount: 500,
             currency: 'BDT',
             tran_id: tran_id, // use unique tran_id for each api call
-            success_url: `http://localhost:5000/api/payment/success/${user._id}`,
-            fail_url: 'http://localhost:5000/api/payment/fail',
-            cancel_url: 'http://localhost:5000/api/payment/fail',
-            ipn_url: 'http://localhost:5000/api/payment/ipn',
+            success_url: `${process.env.BASE_URL || 'http://localhost:5001'}/api/payment/success/${user._id}`,
+            fail_url: `${process.env.BASE_URL || 'http://localhost:5001'}/api/payment/fail`,
+            cancel_url: `${process.env.BASE_URL || 'http://localhost:5001'}/api/payment/fail`,
+            ipn_url: `${process.env.BASE_URL || 'http://localhost:5001'}/api/payment/ipn`,
             shipping_method: 'No',
             product_name: 'KYC Verification Fee',
             product_category: 'Verification',
@@ -81,10 +81,10 @@ router.post('/success/:userId', async (req, res) => {
         }
 
         // Redirect user back to React frontend
-        res.redirect('http://localhost:5173/profile?payment=success');
+        res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/profile?payment=success`);
     } catch (error) {
         console.error('Error processing success webhook:', error);
-        res.redirect('http://localhost:5173/profile?payment=fail');
+        res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/profile?payment=fail`);
     }
 });
 
@@ -93,7 +93,7 @@ router.post('/success/:userId', async (req, res) => {
 // @access  Public (Webhook from Provider)
 router.post('/fail', async (req, res) => {
     // Redirect user back to React frontend
-    res.redirect('http://localhost:5173/profile?payment=fail');
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/profile?payment=fail`);
 });
 
 // @route   POST /api/payment/ipn

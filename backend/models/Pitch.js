@@ -34,7 +34,10 @@ const pitchSchema = new mongoose.Schema({
     }],
     tags: [{
         type: String
-    }]
+    }],
+    embedding: {
+        type: [Number]
+    }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Pitch', pitchSchema);
