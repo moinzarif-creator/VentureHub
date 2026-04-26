@@ -13,7 +13,7 @@ const { notifyFollowers } = require('../utils/trackingNotifications');
 // @access  Private (Investors usually, but leaving open to authenticated users for now)
 router.post('/', authMiddleware, async (req, res) => {
     try {
-        const { pitchId, bidAmount, equityRequested } = req.body;
+        const { pitchId, bidAmount, equityRequested, termsAndConditions } = req.body;
         const investorId = req.user.id; // Extracted from JWT token via authMiddleware
 
         // Basic validation
@@ -25,8 +25,9 @@ router.post('/', authMiddleware, async (req, res) => {
         const newBid = new Bid({
             pitchId,
             investorId,
-            offerAmount: bidAmount,
-            offerEquity: equityRequested
+            offerAmount: Number(bidAmount),
+            offerEquity: Number(equityRequested),
+            termsAndConditions
         });
 
         // Save to database

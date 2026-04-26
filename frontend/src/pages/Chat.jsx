@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import io from 'socket.io-client';
 
-const socket = io('http://localhost:5001');
+const socket = io(import.meta.env.VITE_API_URL);
 
 const Chat = () => {
     const { userId } = useParams(); // ID of the person we are chatting with
@@ -31,7 +31,7 @@ const Chat = () => {
                 if (!token) return navigate('/login');
 
                 // Get Current User Profile
-                const meRes = await axios.get('http://localhost:5001/api/auth/me', {
+                const meRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/me`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 setCurrentUser(meRes.data);
@@ -40,7 +40,7 @@ const Chat = () => {
                 // but for now we'll just handle the messages
                 
                 // Get Historical Messages
-                const msgRes = await axios.get(`http://localhost:5001/api/messages/${userId}`, {
+                const msgRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/messages/${userId}`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 setMessages(msgRes.data);
