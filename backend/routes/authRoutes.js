@@ -15,8 +15,8 @@ const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
         folder: 'venturehive_kyc',
-        allowed_formats: ['jpg', 'jpeg', 'png', 'pdf', 'mp4', 'mov'],
-        resource_type: 'auto'
+        allowed_formats: ['mp4', 'mov', 'avi', 'webm'],
+        resource_type: 'video'
     }
 });
 const upload = multer({ storage });
@@ -152,8 +152,7 @@ router.post('/login', async (req, res) => {
                         phone: user.phone,
                         isVerified: user.isVerified,
                         verificationStatus: user.verificationStatus,
-                        nidUrl: user.nidUrl,
-                        taxUrl: user.taxUrl,
+                        kycVideoUrl: user.kycVideoUrl,
                         hasPaidKycFee: user.hasPaidKycFee
                     }
                 });
@@ -198,8 +197,7 @@ router.post('/mock-payment', authMiddleware, async (req, res) => {
             phone: user.phone,
             isVerified: user.isVerified,
             verificationStatus: user.verificationStatus,
-            nidUrl: user.nidUrl,
-            taxUrl: user.taxUrl,
+            kycVideoUrl: user.kycVideoUrl,
             hasPaidKycFee: user.hasPaidKycFee
         });
     } catch (error) {
@@ -209,12 +207,12 @@ router.post('/mock-payment', authMiddleware, async (req, res) => {
 });
 
 // @route   PUT /api/auth/kyc-upload
-// @desc    Upload KYC documents (NID & Tax) and update status
+// @desc    Upload KYC video and update status
 // @access  Private
-router.put('/kyc-upload', authMiddleware, upload.fields([{ name: 'nid', maxCount: 1 }, { name: 'taxDocument', maxCount: 1 }]), async (req, res) => {
+router.put('/kyc-upload', authMiddleware, upload.single('kycVideo'), async (req, res) => {
     try {
-        if (!req.files || !req.files.nid || !req.files.taxDocument) {
-            return res.status(400).json({ message: 'Please upload both NID and Tax Document files' });
+        if (!req.file) {
+            return res.status(400).json({ message: 'Please upload a video file' });
         }
 
         const user = await User.findById(req.user.id);
@@ -222,8 +220,7 @@ router.put('/kyc-upload', authMiddleware, upload.fields([{ name: 'nid', maxCount
             return res.status(404).json({ message: 'User not found' });
         }
 
-        user.nidUrl = req.files.nid[0].path;
-        user.taxUrl = req.files.taxDocument[0].path;
+        user.kycVideoUrl = req.file.path;
         user.verificationStatus = 'pending';
 
         await user.save();
@@ -235,8 +232,7 @@ router.put('/kyc-upload', authMiddleware, upload.fields([{ name: 'nid', maxCount
             phone: user.phone,
             isVerified: user.isVerified,
             verificationStatus: user.verificationStatus,
-            nidUrl: user.nidUrl,
-            taxUrl: user.taxUrl
+            kycVideoUrl: user.kycVideoUrl
         });
     } catch (error) {
         console.error('Error uploading KYC:', error);

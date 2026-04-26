@@ -47,10 +47,7 @@ const userSchema = new mongoose.Schema({
         enum: ['unverified', 'pending', 'approved', 'rejected'],
         default: 'unverified'
     },
-    nidUrl: {
-        type: String
-    },
-    taxUrl: {
+    kycVideoUrl: {
         type: String
     }
 }, { timestamps: true });

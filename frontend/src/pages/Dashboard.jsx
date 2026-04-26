@@ -23,7 +23,6 @@ const Dashboard = () => {
     const [minAsk, setMinAsk] = useState('');
     const [maxAsk, setMaxAsk] = useState('');
     const [selectedTag, setSelectedTag] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('');
 
     const fetchPitches = async () => {
         setLoading(true);
@@ -34,9 +33,8 @@ const Dashboard = () => {
             if (minAsk) params.minAsk = minAsk;
             if (maxAsk) params.maxAsk = maxAsk;
             if (selectedTag) params.tag = selectedTag;
-            if (selectedCategory) params.category = selectedCategory;
 
-            const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/pitches`, {
+            const res = await axios.get('http://localhost:5001/api/pitches', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 },
@@ -63,7 +61,7 @@ const Dashboard = () => {
             setActiveBidPitchId(null);
         } else {
             setActiveBidPitchId(pitchId);
-            setBidData({ bidAmount: '', equityRequested: '', termsAndConditions: '' });
+            setBidData({ bidAmount: '', equityRequested: '' });
             setBidSuccess(null);
         }
     };
@@ -75,7 +73,7 @@ const Dashboard = () => {
 
         try {
             const token = localStorage.getItem('token');
-            await axios.post(`${import.meta.env.VITE_API_URL}/api/bids`,
+            await axios.post('http://localhost:5001/api/bids',
                 { pitchId, ...bidData },
                 { headers: { 'Authorization': `Bearer ${token}` } }
             );
@@ -95,7 +93,7 @@ const Dashboard = () => {
     const handleLike = async (pitchId) => {
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.put(`${import.meta.env.VITE_API_URL}/api/pitches/${pitchId}/like`, {}, {
+            const res = await axios.put(`http://localhost:5001/api/pitches/${pitchId}/like`, {}, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
@@ -129,7 +127,7 @@ const Dashboard = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/comments/pitch/${pitchId}`, {
+            const res = await axios.get(`http://localhost:5001/api/comments/pitch/${pitchId}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             setActivePitchComments(res.data);
@@ -146,7 +144,7 @@ const Dashboard = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/comments`,
+            const res = await axios.post(`http://localhost:5001/api/comments`,
                 { text: newCommentText, pitchId },
                 { headers: { 'Authorization': `Bearer ${token}` } }
             );
@@ -179,10 +177,7 @@ const Dashboard = () => {
                 <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 mb-8 z-10 relative">
                     <form onSubmit={(e) => { e.preventDefault(); fetchPitches(); }} className="flex flex-col md:flex-row gap-4 items-end">
                         <div className="flex-1 w-full">
-                            <label className="flex items-center gap-2 text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">
-                                Search Keywords
-                                <span className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm">AI Powered</span>
-                            </label>
+                            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Search Keywords</label>
                             <div className="relative">
                                 <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
@@ -191,41 +186,21 @@ const Dashboard = () => {
                                     type="text"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    placeholder="Search by concept, e.g. 'green tech' or 'medical AI'..."
-                                    className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-colors text-sm shadow-inner"
+                                    placeholder="Search problem, solution, or title..."
+                                    className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors text-sm"
                                 />
                             </div>
                         </div>
 
-                        <div className="flex gap-2 w-full md:w-auto">
-                            <div className="w-1/2 md:w-40">
-                                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Category</label>
-                                <select
-                                    value={selectedCategory}
-                                    onChange={(e) => setSelectedCategory(e.target.value)}
-                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors text-sm"
-                                >
-                                    <option value="">All Categories</option>
-                                    <option value="Fintech">Fintech</option>
-                                    <option value="Healthcare">Healthcare</option>
-                                    <option value="EdTech">EdTech</option>
-                                    <option value="E-commerce">E-commerce</option>
-                                    <option value="AI">AI/Machine Learning</option>
-                                    <option value="GreenTech">GreenTech</option>
-                                    <option value="SaaS">SaaS</option>
-                                </select>
-                            </div>
-
-                            <div className="w-1/2 md:w-40 flex-shrink-0">
-                                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Specific Tag</label>
-                                <input
-                                    type="text"
-                                    value={selectedTag}
-                                    onChange={(e) => setSelectedTag(e.target.value)}
-                                    placeholder="E.g., Crypto"
-                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors text-sm"
-                                />
-                            </div>
+                        <div className="w-full md:w-40 flex-shrink-0">
+                            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Specific Tag</label>
+                            <input
+                                type="text"
+                                value={selectedTag}
+                                onChange={(e) => setSelectedTag(e.target.value)}
+                                placeholder="E.g., AI, FinTech"
+                                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors text-sm"
+                            />
                         </div>
 
                         <div className="flex gap-2 w-full md:w-auto">
@@ -260,11 +235,11 @@ const Dashboard = () => {
                             >
                                 Apply Filters
                             </button>
-                            {(searchTerm || minAsk || maxAsk || selectedTag || selectedCategory) && (
+                            {(searchTerm || minAsk || maxAsk || selectedTag) && (
                                 <button
                                     type="button"
                                     onClick={() => {
-                                        setSearchTerm(''); setMinAsk(''); setMaxAsk(''); setSelectedTag(''); setSelectedCategory('');
+                                        setSearchTerm(''); setMinAsk(''); setMaxAsk(''); setSelectedTag('');
                                         setTimeout(() => document.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })), 0);
                                     }}
                                     className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors text-sm focus:outline-none"
@@ -341,15 +316,11 @@ const Dashboard = () => {
                                 <div className="px-6 pb-6 pt-0 mt-auto">
                                     <div className="flex gap-3">
                                         <button
-                                            onClick={(e) => {
-                                                e.currentTarget.classList.add('scale-110', 'text-red-600');
-                                                setTimeout(() => e.currentTarget.classList.remove('scale-110', 'text-red-600'), 200);
-                                                handleLike(pitch._id);
-                                            }}
-                                            className="flex-shrink-0 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold py-3 px-4 rounded-lg shadow-sm transition-all duration-200 ease-in-out flex justify-center items-center gap-2 transform active:scale-95"
+                                            onClick={() => handleLike(pitch._id)}
+                                            className="flex-shrink-0 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 font-bold py-3 px-4 rounded-lg shadow-sm transition-colors duration-200 flex justify-center items-center gap-2"
                                             title="Like Pitch"
                                         >
-                                            <span className="text-red-500 text-lg transition-transform duration-200">❤️</span>
+                                            <span className="text-red-500 text-lg">❤️</span>
                                             <span>{pitch.likes?.length || 0}</span>
                                         </button>
                                         <button
@@ -416,17 +387,6 @@ const Dashboard = () => {
                                                                 placeholder="Equity expected in return"
                                                             />
                                                         </div>
-                                                        <div>
-                                                            <label className="block text-xs font-medium text-gray-700 mb-1">Terms & Conditions</label>
-                                                            <textarea
-                                                                name="termsAndConditions"
-                                                                value={bidData.termsAndConditions}
-                                                                onChange={handleBidChange}
-                                                                rows="2"
-                                                                className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-green-500 focus:border-green-500 sm:text-sm"
-                                                                placeholder="E.g., I require a board seat..."
-                                                            ></textarea>
-                                                        </div>
                                                         <button
                                                             type="submit"
                                                             disabled={bidLoading}
@@ -455,18 +415,12 @@ const Dashboard = () => {
                                                     <p className="text-sm text-gray-500 text-center py-4 italic">No comments yet. Be the first to share your thoughts!</p>
                                                 ) : (
                                                     activePitchComments.map(comment => (
-                                                        <div key={comment._id} className={`p-4 rounded-xl shadow-sm border mb-3 flex flex-col ${comment.author?.role === 'Entrepreneur' ? 'bg-indigo-50 border-indigo-100 ml-6 rounded-tr-none' : 'bg-white border-blue-100 mr-6 rounded-tl-none'}`}>
-                                                            <div className="flex justify-between items-start mb-2">
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white ${comment.author?.role === 'Entrepreneur' ? 'bg-indigo-500' : 'bg-blue-500'}`}>
-                                                                        {comment.author?.name?.charAt(0) || 'U'}
-                                                                    </div>
-                                                                    <span className="font-bold text-gray-800 text-sm">{comment.author?.name || 'Unknown User'}</span>
-                                                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${comment.author?.role === 'Entrepreneur' ? 'bg-indigo-100 text-indigo-800' : 'bg-blue-100 text-blue-800'}`}>{comment.author?.role || 'User'}</span>
-                                                                </div>
-                                                                <span className="text-[10px] text-gray-400 font-medium">{new Date(comment.createdAt).toLocaleDateString()}</span>
+                                                        <div key={comment._id} className="bg-white p-3 rounded shadow-sm border border-blue-100">
+                                                            <div className="flex justify-between items-start mb-1">
+                                                                <span className="font-bold text-gray-800 text-xs">{comment.author?.name || 'Unknown User'}</span>
+                                                                <span className="text-[10px] text-gray-400">{new Date(comment.createdAt).toLocaleDateString()}</span>
                                                             </div>
-                                                            <p className="text-sm text-gray-700 break-words pl-8">{comment.text}</p>
+                                                            <p className="text-sm text-gray-700 break-words">{comment.text}</p>
                                                         </div>
                                                     ))
                                                 )}

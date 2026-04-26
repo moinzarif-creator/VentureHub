@@ -7,14 +7,33 @@ const PublicProfile = () => {
     const [userData, setUserData] = useState(null);
     const [profileData, setProfileData] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [currentUser, setCurrentUser] = useState(null); // ADDED
+    const [bids, setBids] = useState([]); // UPDATED to array
     const [error, setError] = useState('');
 
     useEffect(() => {
         const fetchProfile = async () => {
             try {
-                const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/profiles/public/${id}`);
+                const res = await axios.get(`http://localhost:5001/api/profiles/public/${id}`);
                 setUserData(res.data.user);
                 setProfileData(res.data.profile);
+
+                // Fetch current user and check for bids
+                const token = localStorage.getItem('token');
+                if (token) {
+                    const userRes = await axios.get('http://localhost:5001/api/auth/me', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    setCurrentUser(userRes.data);
+
+                    // If viewing an investor, check if they have bid on our pitches
+                    if (res.data.user.role === 'Investor') {
+                        const bidRes = await axios.get(`http://localhost:5001/api/bids/check/${id}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        setBids(bidRes.data);
+                    }
+                }
             } catch (err) {
                 setError(err.response?.data?.message || 'Error fetching profile');
             } finally {
@@ -35,7 +54,7 @@ const PublicProfile = () => {
     return (
         <div className="bg-gray-50 min-h-screen py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto">
-                
+
                 <Link to="/explore" className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-800 mb-6 transition-colors">
                     <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                     Back to Directory
@@ -45,10 +64,10 @@ const PublicProfile = () => {
                     <div className="h-32 sm:h-48 bg-gradient-to-r from-blue-600 to-indigo-700 w-full relative">
                         {/* Banner color */}
                     </div>
-                    
+
                     <div className="relative px-6 pb-8 sm:px-10">
                         <div className="flex flex-col sm:flex-row sm:items-end -mt-16 sm:-mt-20 mb-6">
-                            
+
                             <div className="relative z-10 w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-white overflow-hidden bg-white shadow-lg flex-shrink-0 animate-fade-in-up">
                                 {isInvestor && profileData?.avatarUrl && (
                                     <img src={profileData.avatarUrl} alt={userData.name} className="w-full h-full object-cover" />
@@ -58,14 +77,14 @@ const PublicProfile = () => {
                                 )}
                                 {(!profileData || (!profileData.avatarUrl && !profileData.logoUrl)) && (
                                     <div className="flex items-center justify-center w-full h-full bg-gray-100 text-gray-400">
-                                         <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                        <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
                                     </div>
                                 )}
                             </div>
 
                             <div className="mt-4 sm:mt-0 sm:ml-6 pb-2">
                                 <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">{userData.name}</h1>
-                                
+
                                 <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2">
                                     <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold tracking-wide shadow-sm
                                         ${isInvestor ? 'bg-indigo-100 text-indigo-800 border border-indigo-200' : ''}
@@ -74,7 +93,7 @@ const PublicProfile = () => {
                                     `}>
                                         {userData.role}
                                     </span>
-                                    
+
                                     {isEntrepreneur && profileData?.companyName && (
                                         <span className="text-xl font-bold text-gray-700 bg-gray-100 px-3 py-1 rounded-lg">
                                             🏢 {profileData.companyName}
@@ -86,7 +105,7 @@ const PublicProfile = () => {
 
                         {/* Profile Content Body */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-10">
-                            
+
                             <div className="md:col-span-2 space-y-8 animate-fade-in">
                                 {isInvestor && (
                                     <>
@@ -98,6 +117,64 @@ const PublicProfile = () => {
                                                 <p className="text-gray-400 italic">No investment thesis provided.</p>
                                             )}
                                         </section>
+
+                                        {/* Bid Section for Entrepreneurs */}
+                                        {currentUser?.role === 'Entrepreneur' && bids && bids.length > 0 && (
+                                            <section className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6 shadow-md">
+                                                <div className="flex justify-between items-center mb-4">
+                                                    <h3 className="text-blue-900 font-black text-xl flex items-center gap-2">
+                                                        💰 Latest Bid on Your Pitch
+                                                    </h3>
+                                                    <span className="bg-blue-600 text-white text-xs font-black px-2 py-1 rounded">ACTIVE</span>
+                                                </div>
+                                                
+                                                {/* Prominent Latest Bid */}
+                                                <div className="bg-white p-5 rounded-xl border border-blue-100 shadow-sm mb-6">
+                                                    <p className="text-sm font-bold text-gray-500 mb-2">Pitch: {bids[0].pitchId?.title}</p>
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div>
+                                                            <p className="text-xs font-bold text-gray-400 uppercase mb-1">Offer Amount</p>
+                                                            <p className="text-2xl font-black text-blue-600">${bids[0].offerAmount?.toLocaleString()}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs font-bold text-gray-400 uppercase mb-1">Equity Requested</p>
+                                                            <p className="text-2xl font-black text-blue-600">{bids[0].offerEquity}%</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Bid History (if any more exist) */}
+                                                {bids.length > 1 && (
+                                                    <div className="mt-4 pt-4 border-t border-blue-100">
+                                                        <h4 className="text-sm font-bold text-blue-800 mb-2 uppercase tracking-wider">Previous Bid History</h4>
+                                                        <ul className="space-y-2">
+                                                            {bids.slice(1).map((bid, index) => (
+                                                                <li key={index} className="text-sm text-blue-600 flex justify-between bg-blue-100/50 px-3 py-2 rounded-lg">
+                                                                    <span>Previously bid on: <span className="font-bold">{bid.pitchId?.title}</span></span>
+                                                                    <span className="font-black">${bid.offerAmount?.toLocaleString()}</span>
+                                                                </li>
+                                                            ))}
+                                                        </ul>
+                                                    </div>
+                                                )}
+                                            </section>
+                                        )}
+
+                                        {/* Universal Contact Button for Entrepreneurs viewing an Investor */}
+                                        {currentUser?.role === 'Entrepreneur' && isInvestor && (
+                                            <section className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm flex items-center justify-between gap-4">
+                                                <div>
+                                                    <h3 className="text-lg font-bold text-gray-900 mb-1">Ready to Connect?</h3>
+                                                    <p className="text-sm text-gray-500">Initiate a private conversation with {userData.name} about your pitches.</p>
+                                                </div>
+                                                <Link 
+                                                    to={`/chat/${userData._id}`}
+                                                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg transition-all transform active:scale-95"
+                                                >
+                                                    Message / Contact Investor
+                                                </Link>
+                                            </section>
+                                        )}
                                     </>
                                 )}
 
@@ -155,7 +232,7 @@ const PublicProfile = () => {
                                 {isEntrepreneur && (
                                     <>
                                         {profileData?.pitchDeckUrl ? (
-                                            <a 
+                                            <a
                                                 href={profileData.pitchDeckUrl}
                                                 target="_blank"
                                                 rel="noreferrer"
@@ -171,7 +248,7 @@ const PublicProfile = () => {
                                                 <p className="text-sm font-bold text-gray-400">No Pitch Deck Provided</p>
                                             </div>
                                         )}
-                                        
+
                                         <div className="mt-4 text-center">
                                             <Link to={`/chat/${userData._id}`} className="text-sm font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-full transition-colors">
                                                 💬 Message {userData.name}

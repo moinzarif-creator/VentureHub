@@ -14,7 +14,7 @@ const Inbox = () => {
                 const token = localStorage.getItem('token');
                 if (!token) return navigate('/login');
 
-                const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/messages/conversations`, {
+                const res = await axios.get('http://localhost:5001/api/messages/conversations', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 

@@ -19,9 +19,6 @@ const bidSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-    termsAndConditions: {
-        type: String
-    },
     status: {
         type: String,
         enum: ['Pending', 'Accepted', 'Rejected', 'Countered'],

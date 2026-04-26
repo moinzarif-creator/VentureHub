@@ -20,7 +20,7 @@ const VerifyEmail = () => {
         setMessage(null);
 
         try {
-            await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/verify-email`, { email, otpCode });
+            await axios.post('http://localhost:5001/api/auth/verify-email', { email, otpCode });
             setMessage('Your email has been successfully verified! Redirecting to login...');
             setTimeout(() => {
                 navigate('/login');
@@ -38,7 +38,7 @@ const VerifyEmail = () => {
         setMessage(null);
 
         try {
-            const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/resend-otp`, { email });
+            const res = await axios.post('http://localhost:5001/api/auth/resend-otp', { email });
             setMessage(res.data.message || 'A new verification code has been sent.');
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to resend code.');

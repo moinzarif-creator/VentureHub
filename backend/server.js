@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const http = require('http'); // Required for Socket.io
-const { Server } = require('socket.io'); // Socket.io Server class
+const { initSocket } = require('./utils/socketManager');
 const Message = require('./models/Message'); // For saving messages
 
 dotenv.config();
@@ -11,12 +11,8 @@ dotenv.config();
 const app = express();
 const server = http.createServer(app);
 
-const io = new Server(server, {
-  cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:5173", // Allow react frontend
-    methods: ["GET", "POST"]
-  }
-});
+// Initialize Socket.io via manager
+const io = initSocket(server);
 
 // Middleware
 app.use(cors());
@@ -27,6 +23,7 @@ const pitchRoutes = require('./routes/pitchRoutes');
 const bidRoutes = require('./routes/bidRoutes');
 const commentRoutes = require('./routes/commentRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 
 // Basic Route
 app.get('/', (req, res) => {
@@ -67,6 +64,9 @@ app.use('/api/users', userRoutes);
 const exploreRoutes = require('./routes/exploreRoutes');
 app.use('/api/explore', exploreRoutes);
 
+// Notification Routes
+app.use('/api/notifications', notificationRoutes);
+
 // Global Error Handler to catch hidden crashes
 app.use((err, req, res, next) => {
   console.error("🔥 FATAL ERROR:", err);
@@ -81,38 +81,12 @@ if (!MONGO_URI) {
   process.exit(1);
 }
 
-// Socket.io Events
-io.on('connection', (socket) => {
-  console.log(`User Connected: ${socket.id}`);
-
-  // Join a specific chat room
-  socket.on('join_room', (data) => {
-    socket.join(data.roomId);
-    console.log(`User with ID: ${socket.id} joined room: ${data.roomId}`);
-  });
-
-  // Handle incoming messages
-  socket.on('send_message', async (data) => {
-    try {
-      // data: { roomId, sender, receiver, content }
-      const newMessage = new Message({
-        sender: data.sender,
-        receiver: data.receiver,
-        content: data.content
-      });
-      await newMessage.save();
-
-      // Emit to everyone in the room (including sender to confirm receipt if desired)
-      io.to(data.roomId).emit('receive_message', newMessage);
-    } catch (err) {
-      console.error("Error saving socket message to DB:", err);
-    }
-  });
-
-  socket.on('disconnect', () => {
-    console.log('User Disconnected', socket.id);
-  });
-});
+// We handle the socket event for direct messages here since we need the 'io' instance
+// Wait, actually, the socketManager now handles all connection logic. 
+// We should move the 'send_message' event to socketManager OR we can listen to it here.
+// Let's just modify the `socketManager.js` or keep it simple: `initSocket` handles all events.
+// Since `server.js` was doing `io.on('connection')`, we need to add the `send_message` logic 
+// back to `socketManager.js`. So I will remove `io.on('connection')` from `server.js` entirely.
 
 mongoose.connect(MONGO_URI)
   .then(() => {

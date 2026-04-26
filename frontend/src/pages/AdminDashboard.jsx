@@ -15,7 +15,7 @@ const AdminDashboard = () => {
                     setLoading(false);
                     return;
                 }
-                const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/admin/kyc-pending`, {
+                const res = await axios.get('http://localhost:5001/api/admin/kyc-pending', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 setPendingUsers(res.data);
@@ -32,7 +32,7 @@ const AdminDashboard = () => {
     const handleReview = async (userId, status) => {
         try {
             const token = localStorage.getItem('token');
-            await axios.put(`${import.meta.env.VITE_API_URL}/api/admin/kyc-review/${userId}`, { status }, {
+            await axios.put(`http://localhost:5001/api/admin/kyc-review/${userId}`, { status }, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 

@@ -12,6 +12,7 @@ import Navbar from './components/Navbar';
 import VerifyEmail from './pages/VerifyEmail';
 import Explore from './pages/Explore';
 import PublicProfile from './pages/PublicProfile';
+import PitchDetail from './pages/PitchDetail'; // ADDED
 
 function App() {
     return (
@@ -25,6 +26,7 @@ function App() {
                     <Route path="/login" element={<Login />} />
                     <Route path="/create-pitch" element={<CreatePitch />} />
                     <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/dashboard/pitch/:id" element={<PitchDetail />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/explore" element={<Explore />} />
                     <Route path="/profile/:id" element={<PublicProfile />} />
