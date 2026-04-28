@@ -1,34 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
+import PitchSelectionModal from '../components/PitchSelectionModal';
+import { useToast } from '../context/ToastContext';
 
 const PublicProfile = () => {
     const { id } = useParams();
+    const toast = useToast();
     const [userData, setUserData] = useState(null);
     const [profileData, setProfileData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [currentUser, setCurrentUser] = useState(null); // ADDED
     const [bids, setBids] = useState([]); // UPDATED to array
     const [error, setError] = useState('');
+    const [selectedInvestor, setSelectedInvestor] = useState(null);
 
     useEffect(() => {
         const fetchProfile = async () => {
             try {
-                const res = await axios.get(`http://localhost:5001/api/profiles/public/${id}`);
+                const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/profiles/public/${id}`);
                 setUserData(res.data.user);
                 setProfileData(res.data.profile);
 
                 // Fetch current user and check for bids
                 const token = localStorage.getItem('token');
                 if (token) {
-                    const userRes = await axios.get('http://localhost:5001/api/auth/me', {
+                    const userRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/me`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     setCurrentUser(userRes.data);
 
                     // If viewing an investor, check if they have bid on our pitches
                     if (res.data.user.role === 'Investor') {
-                        const bidRes = await axios.get(`http://localhost:5001/api/bids/check/${id}`, {
+                        const bidRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/bids/check/${id}`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
                         setBids(bidRes.data);
@@ -131,7 +135,7 @@ const PublicProfile = () => {
                                                 {/* Prominent Latest Bid */}
                                                 <div className="bg-white p-5 rounded-xl border border-blue-100 shadow-sm mb-6">
                                                     <p className="text-sm font-bold text-gray-500 mb-2">Pitch: {bids[0].pitchId?.title}</p>
-                                                    <div className="grid grid-cols-2 gap-4">
+                                                    <div className="grid grid-cols-2 gap-4 mb-4">
                                                         <div>
                                                             <p className="text-xs font-bold text-gray-400 uppercase mb-1">Offer Amount</p>
                                                             <p className="text-2xl font-black text-blue-600">${bids[0].offerAmount?.toLocaleString()}</p>
@@ -140,6 +144,13 @@ const PublicProfile = () => {
                                                             <p className="text-xs font-bold text-gray-400 uppercase mb-1">Equity Requested</p>
                                                             <p className="text-2xl font-black text-blue-600">{bids[0].offerEquity}%</p>
                                                         </div>
+                                                    </div>
+
+                                                    <div className="border-t border-blue-50 pt-3">
+                                                        <p className="text-xs font-bold text-gray-400 uppercase mb-1">Terms & Conditions</p>
+                                                        <p className="text-sm text-gray-700 italic">
+                                                            {bids[0].termsAndConditions || 'None'}
+                                                        </p>
                                                     </div>
                                                 </div>
 
@@ -162,18 +173,28 @@ const PublicProfile = () => {
 
                                         {/* Universal Contact Button for Entrepreneurs viewing an Investor */}
                                         {currentUser?.role === 'Entrepreneur' && isInvestor && (
-                                            <section className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm flex items-center justify-between gap-4">
-                                                <div>
-                                                    <h3 className="text-lg font-bold text-gray-900 mb-1">Ready to Connect?</h3>
-                                                    <p className="text-sm text-gray-500">Initiate a private conversation with {userData.name} about your pitches.</p>
-                                                </div>
-                                                <Link 
-                                                    to={`/chat/${userData._id}`}
-                                                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg transition-all transform active:scale-95"
-                                                >
-                                                    Message / Contact Investor
-                                                </Link>
-                                            </section>
+                                             <section className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
+                                                 <div className="mb-6">
+                                                     <h3 className="text-lg font-bold text-gray-900 mb-1">Ready to Connect?</h3>
+                                                     <p className="text-sm text-gray-500">Initiate a private conversation or directly share a pitch with {userData.name}.</p>
+                                                 </div>
+                                                 <div className="flex flex-col sm:flex-row gap-4">
+                                                     <Link 
+                                                         to={`/chat/${userData._id}`}
+                                                         className="flex-1 bg-white text-indigo-600 border-2 border-indigo-600 hover:bg-indigo-50 px-8 py-3 rounded-xl font-bold transition-all text-center transform active:scale-95 flex items-center justify-center gap-2"
+                                                     >
+                                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
+                                                         Message
+                                                     </Link>
+                                                     <button 
+                                                         onClick={() => setSelectedInvestor({ id: userData._id, name: userData.name })}
+                                                         className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-indigo-100 transition-all transform active:scale-95 flex items-center justify-center gap-2"
+                                                     >
+                                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                                                         Send Pitch
+                                                     </button>
+                                                 </div>
+                                             </section>
                                         )}
                                     </>
                                 )}
@@ -261,6 +282,18 @@ const PublicProfile = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Pitch Selection Modal */}
+            {selectedInvestor && (
+                <PitchSelectionModal 
+                    investorId={selectedInvestor.id}
+                    investorName={selectedInvestor.name}
+                    onClose={() => setSelectedInvestor(null)}
+                    onPitchSent={() => {
+                        toast.success(`Pitch sent to ${selectedInvestor.name}!`);
+                    }}
+                />
+            )}
         </div>
     );
 };

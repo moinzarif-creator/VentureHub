@@ -12,7 +12,7 @@ const notificationSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['like', 'comment', 'bid', 'message', 'synergy_pitch', 'synergy_fomo', 'synergy_market'],
+        enum: ['like', 'comment', 'bid', 'message', 'synergy_pitch', 'synergy_fomo', 'synergy_market', 'direct_pitch'],
         required: true
     },
     referenceId: {

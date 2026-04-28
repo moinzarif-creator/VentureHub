@@ -14,12 +14,15 @@ import Explore from './pages/Explore';
 import PublicProfile from './pages/PublicProfile';
 import PitchDetail from './pages/PitchDetail'; // ADDED
 
+import { ToastProvider } from './context/ToastContext';
+
 function App() {
     return (
-        <Router>
-            <div style={{ fontFamily: 'sans-serif', backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
-                <Navbar />
-                <Routes>
+        <ToastProvider>
+            <Router>
+                <div style={{ fontFamily: 'sans-serif', backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
+                    <Navbar />
+                    <Routes>
                     <Route path="/" element={<h1>Welcome to VentureHive</h1>} />
                     <Route path="/register" element={<Register />} />
                     <Route path="/verify-email" element={<VerifyEmail />} />
@@ -34,8 +37,9 @@ function App() {
                     <Route path="/chat/:userId" element={<Chat />} />
                     <Route path="/inbox" element={<Inbox />} />
                 </Routes>
-            </div>
-        </Router>
+                </div>
+            </Router>
+        </ToastProvider>
     );
 }
 

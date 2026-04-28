@@ -52,7 +52,7 @@ const CreatePitch = () => {
 
         try {
             const token = localStorage.getItem('token');
-            await axios.post('http://localhost:5001/api/pitches', submitData, {
+            await axios.post(`${import.meta.env.VITE_API_URL}/api/pitches`, submitData, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
                     'Authorization': `Bearer ${token}`

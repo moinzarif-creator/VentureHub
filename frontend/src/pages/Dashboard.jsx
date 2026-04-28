@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useToast } from '../context/ToastContext';
 
 const Dashboard = () => {
     const navigate = useNavigate();
+    const toast = useToast();
     const [pitches, setPitches] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -81,12 +83,13 @@ const Dashboard = () => {
             );
 
             setBidSuccess(pitchId);
+            toast.success('Investment offer submitted successfully!');
             setTimeout(() => {
                 setActiveBidPitchId(null);
                 setBidSuccess(null);
             }, 3000); // Close form after 3 seconds on success
         } catch (err) {
-            alert(err.response?.data?.message || 'Error placing bid');
+            toast.error(err.response?.data?.message || 'Error placing bid');
         } finally {
             setBidLoading(false);
         }
@@ -107,7 +110,7 @@ const Dashboard = () => {
                 return pitch;
             }));
         } catch (err) {
-            alert(err.response?.data?.message || 'Error updating like status');
+            toast.error(err.response?.data?.message || 'Error updating like status');
         }
     };
 
@@ -154,8 +157,9 @@ const Dashboard = () => {
             // Instantly add the new comment to the UI array
             setActivePitchComments([...activePitchComments, res.data]);
             setNewCommentText('');
+            toast.success('Comment posted!');
         } catch (err) {
-            alert(err.response?.data?.message || 'Error posting comment');
+            toast.error(err.response?.data?.message || 'Error posting comment');
         }
     };
 

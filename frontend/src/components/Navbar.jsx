@@ -23,14 +23,14 @@ const Navbar = () => {
         const fetchUserAndNotifications = async () => {
             if (token) {
                 try {
-                    const res = await axios.get('http://localhost:5001/api/auth/me', {
+                    const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/auth/me`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     setUserRole(res.data.role);
                     setUserId(res.data._id);
 
                     // Fetch notifications
-                    const notifRes = await axios.get('http://localhost:5001/api/notifications', {
+                    const notifRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/notifications`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     setNotifications(notifRes.data);
@@ -46,7 +46,7 @@ const Navbar = () => {
     useEffect(() => {
         let socket;
         if (token && userId) {
-            socket = io('http://localhost:5001');
+            socket = io(import.meta.env.VITE_API_URL);
 
             socket.on('connect', () => {
                 socket.emit('join_user_room', userId);
@@ -66,7 +66,7 @@ const Navbar = () => {
     const handleNotificationClick = async (notification) => {
         if (!notification.isRead) {
             try {
-                await axios.put(`http://localhost:5001/api/notifications/${notification._id}/read`, {}, {
+                await axios.put(`${import.meta.env.VITE_API_URL}/api/notifications/${notification._id}/read`, {}, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 setNotifications(prev => prev.map(n => n._id === notification._id ? { ...n, isRead: true } : n));
@@ -79,7 +79,7 @@ const Navbar = () => {
         
         const senderId = typeof notification.sender === 'object' ? notification.sender._id : notification.sender;
 
-        if (notification.type === 'comment') {
+        if (notification.type === 'comment' || notification.type === 'direct_pitch') {
             navigate(`/dashboard/pitch/${notification.referenceId}`);
         } else if (['like', 'bid', 'synergy_pitch', 'synergy_fomo', 'synergy_market'].includes(notification.type)) {
             navigate(`/profile/${senderId}`);
@@ -90,7 +90,7 @@ const Navbar = () => {
 
     const handleMarkAllRead = async () => {
         try {
-            await axios.put(`http://localhost:5001/api/notifications/read-all`, {}, {
+            await axios.put(`${import.meta.env.VITE_API_URL}/api/notifications/read-all`, {}, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));

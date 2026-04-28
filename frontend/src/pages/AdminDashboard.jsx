@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useToast } from '../context/ToastContext';
 
 const AdminDashboard = () => {
+    const toast = useToast();
     const [pendingUsers, setPendingUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -15,7 +17,7 @@ const AdminDashboard = () => {
                     setLoading(false);
                     return;
                 }
-                const res = await axios.get('http://localhost:5001/api/admin/kyc-pending', {
+                const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/admin/kyc-pending`, {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
                 setPendingUsers(res.data);
@@ -32,14 +34,15 @@ const AdminDashboard = () => {
     const handleReview = async (userId, status) => {
         try {
             const token = localStorage.getItem('token');
-            await axios.put(`http://localhost:5001/api/admin/kyc-review/${userId}`, { status }, {
+            await axios.put(`${import.meta.env.VITE_API_URL}/api/admin/kyc-review/${userId}`, { status }, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
             // Instantly remove the reviewed user from the queue
             setPendingUsers(pendingUsers.filter(user => user._id !== userId));
+            toast.success(`Application ${status} successfully!`);
         } catch (err) {
-            alert(err.response?.data?.message || `Error processing ${status} application`);
+            toast.error(err.response?.data?.message || `Error processing ${status} application`);
         }
     };
 
