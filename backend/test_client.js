@@ -1,10 +1,12 @@
+require('dotenv').config();
 const { io } = require('socket.io-client');
 const mongoose = require('mongoose');
 
 // Generate a random object id to test
 const targetUserId = new mongoose.Types.ObjectId().toString();
 
-const socket = io('http://localhost:5001');
+const SERVER_URL = process.env.API_BASE_URL || 'http://localhost:5001';
+const socket = io(SERVER_URL);
 
 socket.on('connect', () => {
     console.log("Connected to server, ID:", socket.id);
