@@ -37,7 +37,7 @@ const PitchDetail = () => {
         fetchPitch();
     }, [id]);
 
-    const [bidData, setBidData] = useState({ offerAmount: '', offerEquity: '', termsAndConditions: '' });
+    const [bidData, setBidData] = useState({ bidAmount: '', equityRequested: '', termsAndConditions: '' });
     const [bidLoading, setBidLoading] = useState(false);
     const [bidSuccess, setBidSuccess] = useState(false);
     const [showBidForm, setShowBidForm] = useState(false);
@@ -194,8 +194,8 @@ const PitchDetail = () => {
                                         required
                                         className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-green-500 font-bold"
                                         placeholder="e.g. 50000"
-                                        value={bidData.offerAmount}
-                                        onChange={(e) => setBidData({...bidData, offerAmount: e.target.value})}
+                                        value={bidData.bidAmount}
+                                        onChange={(e) => setBidData({...bidData, bidAmount: e.target.value})}
                                     />
                                 </div>
                                 <div>
@@ -206,8 +206,8 @@ const PitchDetail = () => {
                                         required
                                         className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-green-500 font-bold"
                                         placeholder="e.g. 5.0"
-                                        value={bidData.offerEquity}
-                                        onChange={(e) => setBidData({...bidData, offerEquity: e.target.value})}
+                                        value={bidData.equityRequested}
+                                        onChange={(e) => setBidData({...bidData, equityRequested: e.target.value})}
                                     />
                                 </div>
                             </div>

@@ -186,13 +186,16 @@ const PublicProfile = () => {
                                                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path></svg>
                                                          Message
                                                      </Link>
-                                                     <button 
-                                                         onClick={() => setSelectedInvestor({ id: userData._id, name: userData.name })}
-                                                         className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-indigo-100 transition-all transform active:scale-95 flex items-center justify-center gap-2"
-                                                     >
-                                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
-                                                         Send Pitch
-                                                     </button>
+                                                     {/* Hide "Send Pitch" if this investor already has an active bid on our pitch */}
+                                                     {bids.length === 0 && (
+                                                         <button 
+                                                             onClick={() => setSelectedInvestor({ id: userData._id, name: userData.name })}
+                                                             className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-indigo-100 transition-all transform active:scale-95 flex items-center justify-center gap-2"
+                                                         >
+                                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                                                             Send Pitch
+                                                         </button>
+                                                     )}
                                                  </div>
                                              </section>
                                         )}

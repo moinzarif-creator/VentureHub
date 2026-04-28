@@ -68,6 +68,28 @@ router.post('/', authMiddleware, async (req, res) => {
     }
 });
 
+// @route   GET /api/bids/my-received
+// @desc    Get all bids received on any of the current entrepreneur's pitches
+//          (used by the Explore page to suppress "Send Pitch" for existing bidders)
+// @access  Private
+router.get('/my-received', authMiddleware, async (req, res) => {
+    try {
+        // Find all pitches owned by this entrepreneur
+        const myPitches = await Pitch.find({ entrepreneurId: req.user.id }).select('_id');
+        const pitchIds = myPitches.map(p => p._id);
+
+        // Return all bids on those pitches, with investorId populated for ID lookup
+        const bids = await Bid.find({ pitchId: { $in: pitchIds } })
+            .populate('investorId', '_id')
+            .select('investorId');
+
+        res.json(bids);
+    } catch (error) {
+        console.error("Error fetching received bids:", error);
+        res.status(500).json({ message: "Server error fetching received bids" });
+    }
+});
+
 // @route   GET /api/bids/pitch/:pitchId
 // @desc    Get all bids for a specific pitch
 // @access  Private (Typically the Entrepreneur who owns the pitch)
