@@ -48,4 +48,18 @@ router.get('/', async (req, res) => {
     }
 });
 
+// @route   GET /api/users/:id
+// @desc    Get a single user's public info
+// @access  Public (or Private)
+router.get('/:id', async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id).select('name role');
+        if (!user) return res.status(404).json({ message: 'User not found' });
+        res.json(user);
+    } catch (err) {
+        console.error("Fetch User Error:", err);
+        res.status(500).send('Server Error');
+    }
+});
+
 module.exports = router;

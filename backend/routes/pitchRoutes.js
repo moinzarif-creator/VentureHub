@@ -5,6 +5,10 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const cloudinary = require('../config/cloudinary');
 const authMiddleware = require('../middleware/authMiddleware');
 const Pitch = require('../models/Pitch');
+const User = require('../models/User'); // ADDED User
+const { createNotification } = require('../utils/socketManager');
+const { checkDirectSynergy } = require('../utils/synergyNotifications');
+const { notifyFollowers } = require('../utils/trackingNotifications');
 const generateEmbedding = require('../utils/generateEmbedding');
 
 // Configure Multer Storage for Cloudinary
@@ -66,6 +70,11 @@ router.post('/', authMiddleware, upload.array('media', 5), async (req, res) => {
 
         const savedPitch = await newPitch.save();
 
+        // Synergy notification (Layer 2) - run asynchronously
+        setImmediate(() => {
+            checkDirectSynergy(savedPitch._id);
+        });
+
         res.status(201).json(savedPitch);
     } catch (error) {
         console.error('Error creating pitch:', error);
@@ -92,7 +101,7 @@ router.get('/mine', authMiddleware, async (req, res) => {
 // @access  Private
 router.get('/', authMiddleware, async (req, res) => {
     try {
-        const { search, minAsk, maxAsk, tag } = req.query;
+        const { search, minAsk, maxAsk, tag, category } = req.query;
         let query = {};
 
         let queryEmbedding = [];
@@ -120,16 +129,17 @@ router.get('/', authMiddleware, async (req, res) => {
         }
 
         // 3. Category Filter
-        if (req.query.category) {
-            query.category = req.query.category;
+        if (category) {
+            query.category = category;
         }
 
-        // 3. Tag Filter
+        // 4. Tag Filter
         if (tag) {
             query.tags = { $regex: new RegExp(`^${tag}$`, 'i') }; // Exact case-insensitive match inside array
         }
 
-        let pitches = await Pitch.find(query).populate('entrepreneurId', 'name');
+        let pitches = await Pitch.find(query)
+            .populate('entrepreneurId', 'name');
 
         if (vectorSearchMode) {
             const cosineSimilarity = (vecA, vecB) => {
@@ -144,16 +154,16 @@ router.get('/', authMiddleware, async (req, res) => {
                }
                if (normA === 0 || normB === 0) return 0;
                return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
-           };
-           
-           pitches = pitches.map(p => {
+            };
+
+            pitches = pitches.map(p => {
                const pitchObj = p.toObject();
                pitchObj.similarity = cosineSimilarity(queryEmbedding, p.embedding);
                return pitchObj;
-           });
-           
-           pitches = pitches.filter(p => p.similarity > 0.25)
-                            .sort((a, b) => b.similarity - a.similarity);
+            });
+
+            pitches = pitches.filter(p => p.similarity > 0.25)
+                             .sort((a, b) => b.similarity - a.similarity);
         } else {
             pitches.sort((a, b) => b.createdAt - a.createdAt);
         }
@@ -182,19 +192,107 @@ router.put('/:id/like', authMiddleware, async (req, res) => {
             // Get remove index and remove the like
             const removeIndex = pitch.likes.map(like => like.toString()).indexOf(req.user.id);
             pitch.likes.splice(removeIndex, 1);
+            await pitch.save();
+            res.json(pitch.likes);
         } else {
             // Add user to likes array
             pitch.likes.unshift(req.user.id);
-        }
+            await pitch.save();
 
-        await pitch.save();
-        res.json(pitch.likes);
+            // Explicitly fetch the user to get their name
+            const actor = await User.findById(req.user.id);
+            const actorName = actor ? actor.name : 'Someone';
+
+            // Send notification to pitch owner
+            createNotification(
+                req.user.id, // sender
+                pitch.entrepreneurId, // receiver
+                'like',
+                pitch._id,
+                `${actorName} liked your pitch: ${pitch.title}`
+            );
+
+            // Notify followers
+            setImmediate(() => {
+                notifyFollowers(pitch._id, req.user.id, actorName, 'like', 'just liked');
+            });
+
+            res.json(pitch.likes);
+        }
     } catch (error) {
         console.error('Error liking pitch:', error);
         if (error.kind === 'ObjectId') {
             return res.status(404).json({ message: 'Pitch not found' });
         }
         res.status(500).json({ message: 'Server Error processing like' });
+    }
+});
+
+// @route   GET /api/pitches/:id
+// @desc    Get a single pitch by ID
+// @access  Private
+router.get('/:id', authMiddleware, async (req, res) => {
+    try {
+        const pitch = await Pitch.findById(req.params.id).populate('entrepreneurId', 'name email');
+        if (!pitch) {
+            return res.status(404).json({ message: 'Pitch not found' });
+        }
+        res.json(pitch);
+    } catch (error) {
+        console.error('Error fetching pitch by ID:', error);
+        if (error.kind === 'ObjectId') {
+            return res.status(404).json({ message: 'Pitch not found' });
+        }
+        res.status(500).json({ message: 'Server Error fetching pitch' });
+    }
+});
+
+// @route   PUT /api/pitches/:id
+// @desc    Update a pitch
+// @access  Private (Owner only)
+router.put('/:id', authMiddleware, async (req, res) => {
+    try {
+        let pitch = await Pitch.findById(req.params.id);
+        if (!pitch) return res.status(404).json({ message: 'Pitch not found' });
+
+        // Check ownership
+        if (pitch.entrepreneurId.toString() !== req.user.id) {
+            return res.status(401).json({ message: 'User not authorized' });
+        }
+
+        const { title, category, problem, solution, askAmount, equityOffered, tags } = req.body;
+
+        // Update fields
+        if (title) pitch.title = title;
+        if (category) pitch.category = category;
+        if (problem) pitch.content.problem = problem;
+        if (solution) pitch.content.solution = solution;
+        if (askAmount) pitch.financials.askAmount = Number(askAmount);
+        if (equityOffered) pitch.financials.equityOffered = Number(equityOffered);
+        if (tags) {
+            pitch.tags = Array.isArray(tags) ? tags : tags.split(',').map(t => t.trim());
+        }
+
+        const updatedPitch = await pitch.save();
+
+        // Notify Followers
+        const actor = await User.findById(req.user.id);
+        const actorName = actor ? actor.name : 'The founder';
+
+        setImmediate(() => {
+            notifyFollowers(
+                pitch._id, 
+                req.user.id, 
+                actorName, 
+                'update', 
+                `updated their pitch: "${pitch.title}". Check out the new details!`
+            );
+        });
+
+        res.json(updatedPitch);
+    } catch (error) {
+        console.error('Error updating pitch:', error);
+        res.status(500).json({ message: 'Server Error updating pitch' });
     }
 });
 

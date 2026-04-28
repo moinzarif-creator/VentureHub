@@ -12,19 +12,24 @@ import Navbar from './components/Navbar';
 import VerifyEmail from './pages/VerifyEmail';
 import Explore from './pages/Explore';
 import PublicProfile from './pages/PublicProfile';
+import PitchDetail from './pages/PitchDetail'; // ADDED
+
+import { ToastProvider } from './context/ToastContext';
 
 function App() {
     return (
-        <Router>
-            <div style={{ fontFamily: 'sans-serif', backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
-                <Navbar />
-                <Routes>
+        <ToastProvider>
+            <Router>
+                <div style={{ fontFamily: 'sans-serif', backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
+                    <Navbar />
+                    <Routes>
                     <Route path="/" element={<h1>Welcome to VentureHive</h1>} />
                     <Route path="/register" element={<Register />} />
                     <Route path="/verify-email" element={<VerifyEmail />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/create-pitch" element={<CreatePitch />} />
                     <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/dashboard/pitch/:id" element={<PitchDetail />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/explore" element={<Explore />} />
                     <Route path="/profile/:id" element={<PublicProfile />} />
@@ -32,8 +37,9 @@ function App() {
                     <Route path="/chat/:userId" element={<Chat />} />
                     <Route path="/inbox" element={<Inbox />} />
                 </Routes>
-            </div>
-        </Router>
+                </div>
+            </Router>
+        </ToastProvider>
     );
 }
 

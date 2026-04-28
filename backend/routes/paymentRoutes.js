@@ -8,6 +8,8 @@ const SSLCommerzPayment = require('sslcommerz-lts');
 const store_id = process.env.STORE_ID;
 const store_passwd = process.env.STORE_PASSWORD;
 const is_live = false; // true for live, false for sandbox
+const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:5000';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 // @route   POST /api/payment/init
 // @desc    Initialize SSLCommerz Payment
@@ -23,10 +25,10 @@ router.post('/init', authMiddleware, async (req, res) => {
             total_amount: 500,
             currency: 'BDT',
             tran_id: tran_id, // use unique tran_id for each api call
-            success_url: `${process.env.BASE_URL || 'http://localhost:5001'}/api/payment/success/${user._id}`,
-            fail_url: `${process.env.BASE_URL || 'http://localhost:5001'}/api/payment/fail`,
-            cancel_url: `${process.env.BASE_URL || 'http://localhost:5001'}/api/payment/fail`,
-            ipn_url: `${process.env.BASE_URL || 'http://localhost:5001'}/api/payment/ipn`,
+            success_url: `${API_BASE_URL}/api/payment/success/${user._id}`,
+            fail_url: `${API_BASE_URL}/api/payment/fail`,
+            cancel_url: `${API_BASE_URL}/api/payment/fail`,
+            ipn_url: `${API_BASE_URL}/api/payment/ipn`,
             shipping_method: 'No',
             product_name: 'KYC Verification Fee',
             product_category: 'Verification',
@@ -81,10 +83,10 @@ router.post('/success/:userId', async (req, res) => {
         }
 
         // Redirect user back to React frontend
-        res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/profile?payment=success`);
+        res.redirect(`${FRONTEND_URL}/profile?payment=success`);
     } catch (error) {
         console.error('Error processing success webhook:', error);
-        res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/profile?payment=fail`);
+        res.redirect(`${FRONTEND_URL}/profile?payment=fail`);
     }
 });
 
@@ -93,7 +95,7 @@ router.post('/success/:userId', async (req, res) => {
 // @access  Public (Webhook from Provider)
 router.post('/fail', async (req, res) => {
     // Redirect user back to React frontend
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/profile?payment=fail`);
+    res.redirect(`${FRONTEND_URL}/profile?payment=fail`);
 });
 
 // @route   POST /api/payment/ipn
