@@ -130,9 +130,6 @@ const Dashboard = () => {
     };
 
     const handleLike = async (pitchId) => {
-        if (!currentUser?.isPhoneVerified) {
-            return toast.error('Please verify your phone number to like pitches');
-        }
         try {
             const token = localStorage.getItem('token');
             const res = await axios.put(`${import.meta.env.VITE_API_URL}/api/pitches/${pitchId}/like`, {}, {
@@ -208,54 +205,48 @@ const Dashboard = () => {
                 <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-200 mb-8 z-10 relative">
                     <form onSubmit={(e) => { e.preventDefault(); fetchPitches(); }} className="flex flex-col md:flex-row gap-4 items-end">
                         <div className="flex-1 w-full">
-                            <label className="flex items-center gap-2 text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">
-                                Search Keywords
-                                <span className="bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-2 py-0.5 rounded-full text-[10px] font-bold shadow-sm">AI Powered</span>
-                            </label>
+                            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Search Keywords</label>
                             <div className="relative">
-                                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                                </span>
+                                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                                 <input
                                     type="text"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    placeholder="Search by concept, e.g. 'green tech' or 'medical AI'..."
-                                    className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-colors text-sm shadow-inner"
+                                    placeholder="Search by title or problem..."
+                                    className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors text-sm"
                                 />
                             </div>
                         </div>
 
-                            <div className="w-full">
-                                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Categories (Multi-Select)</label>
-                                <div className="flex flex-wrap gap-2 bg-gray-50 p-2 border border-gray-300 rounded-lg min-h-[42px]">
-                                    {['Fintech', 'Healthcare', 'EdTech', 'E-commerce', 'AI', 'GreenTech', 'SaaS', 'Web3'].map(cat => (
-                                        <button
-                                            key={cat}
-                                            type="button"
-                                            onClick={() => handleCategoryToggle(cat)}
-                                            className={`px-3 py-1 rounded-full text-[10px] font-black uppercase transition-all ${
-                                                selectedCategory.includes(cat) 
-                                                ? 'bg-blue-600 text-white shadow-md' 
-                                                : 'bg-white text-gray-400 border border-gray-200 hover:border-blue-300'
-                                            }`}
-                                        >
-                                            {cat}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
+                        <div className="w-full md:w-48">
+                            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Category</label>
+                            <select
+                                value={selectedCategory[0] || ''}
+                                onChange={(e) => setSelectedCategory(e.target.value ? [e.target.value] : [])}
+                                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors text-sm"
+                            >
+                                <option value="">All Categories</option>
+                                <option value="Fintech">Fintech</option>
+                                <option value="Healthcare">Healthcare</option>
+                                <option value="EdTech">EdTech</option>
+                                <option value="E-commerce">E-commerce</option>
+                                <option value="AI">AI</option>
+                                <option value="GreenTech">GreenTech</option>
+                                <option value="SaaS">SaaS</option>
+                                <option value="Web3">Web3</option>
+                            </select>
+                        </div>
 
-                            <div className="w-1/2 md:w-40 flex-shrink-0">
-                                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Specific Tag</label>
-                                <input
-                                    type="text"
-                                    value={selectedTag}
-                                    onChange={(e) => setSelectedTag(e.target.value)}
-                                    placeholder="E.g., Crypto"
-                                    className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors text-sm"
-                                />
-                            </div>
+                        <div className="w-1/2 md:w-40 flex-shrink-0">
+                            <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Specific Tag</label>
+                            <input
+                                type="text"
+                                value={selectedTag}
+                                onChange={(e) => setSelectedTag(e.target.value)}
+                                placeholder="E.g., Crypto"
+                                className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors text-sm"
+                            />
+                        </div>
 
                         <div className="flex gap-2 w-full md:w-auto">
                             <div className="w-1/2 md:w-32">

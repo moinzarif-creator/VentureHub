@@ -193,8 +193,8 @@ router.get('/', authMiddleware, async (req, res) => {
 router.put('/:id/like', authMiddleware, async (req, res) => {
     try {
         const user = await User.findById(req.user.id);
-        if (!user || !user.isPhoneVerified) {
-            return res.status(403).json({ message: 'Please verify your phone number to like pitches' });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
         }
 
         const pitch = await Pitch.findById(req.params.id);

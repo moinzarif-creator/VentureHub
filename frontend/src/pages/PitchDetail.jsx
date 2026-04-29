@@ -99,9 +99,6 @@ const PitchDetail = () => {
     };
 
     const handleLike = async () => {
-        if (!currentUser?.isPhoneVerified) {
-            return toast.error('Please verify your phone number to like pitches');
-        }
         try {
             const token = localStorage.getItem('token');
             const res = await axios.put(`${import.meta.env.VITE_API_URL}/api/pitches/${id}/like`, {}, {
