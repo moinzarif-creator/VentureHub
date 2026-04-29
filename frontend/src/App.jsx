@@ -16,6 +16,7 @@ import PitchDetail from './pages/PitchDetail';
 import MyOffers from './pages/MyOffers';
 import BidsHub from './pages/BidsHub';
 import BidView from './pages/BidView';
+import UserHome from './pages/UserHome';
 
 import { ToastProvider } from './context/ToastContext';
 
@@ -26,7 +27,7 @@ function App() {
                 <div style={{ fontFamily: 'sans-serif', backgroundColor: '#f8f9fa', minHeight: '100vh' }}>
                     <Navbar />
                     <Routes>
-                    <Route path="/" element={<h1>Welcome to VentureHive</h1>} />
+                    <Route path="/" element={<UserHome />} />
                     <Route path="/register" element={<Register />} />
                     <Route path="/verify-email" element={<VerifyEmail />} />
                     <Route path="/login" element={<Login />} />
