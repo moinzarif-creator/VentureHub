@@ -12,7 +12,10 @@ import Navbar from './components/Navbar';
 import VerifyEmail from './pages/VerifyEmail';
 import Explore from './pages/Explore';
 import PublicProfile from './pages/PublicProfile';
-import PitchDetail from './pages/PitchDetail'; // ADDED
+import PitchDetail from './pages/PitchDetail';
+import MyOffers from './pages/MyOffers';
+import BidsHub from './pages/BidsHub';
+import BidView from './pages/BidView';
 
 import { ToastProvider } from './context/ToastContext';
 
@@ -36,6 +39,9 @@ function App() {
                     <Route path="/admin" element={<AdminDashboard />} />
                     <Route path="/chat/:userId" element={<Chat />} />
                     <Route path="/inbox" element={<Inbox />} />
+                    <Route path="/my-offers" element={<MyOffers />} />
+                    <Route path="/bids-hub" element={<BidsHub />} />
+                    <Route path="/bid/:id" element={<BidView />} />
                 </Routes>
                 </div>
             </Router>

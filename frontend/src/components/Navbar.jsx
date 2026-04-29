@@ -120,7 +120,18 @@ const Navbar = () => {
                             <Link to="/admin" className="text-amber-400 hover:text-amber-300 font-bold transition-colors">Admin Dashboard</Link>
                         ) : null}
                         <Link to="/dashboard" className="text-gray-200 hover:text-white font-medium transition-colors">Dashboard</Link>
-                        <Link to="/create-pitch" className="text-gray-200 hover:text-white font-medium transition-colors">Create Pitch</Link>
+                        
+                        {userRole === 'Investor' ? (
+                            <Link to="/my-offers" className="text-gray-200 hover:text-white font-medium transition-colors">My Offers</Link>
+                        ) : (
+                            <>
+                                <Link to="/create-pitch" className="text-gray-200 hover:text-white font-medium transition-colors">Create Pitch</Link>
+                                {userRole === 'Entrepreneur' && (
+                                    <Link to="/bids-hub" className="text-gray-200 hover:text-white font-medium transition-colors">Bids Hub</Link>
+                                )}
+                            </>
+                        )}
+                        
                         <Link to="/inbox" className="text-gray-200 hover:text-white font-medium transition-colors">Messages</Link>
                         <Link to="/profile" className="text-gray-200 hover:text-white font-medium transition-colors">My Profile</Link>
                         

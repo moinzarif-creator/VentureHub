@@ -103,6 +103,12 @@ const PublicProfile = () => {
                                             🏢 {profileData.companyName}
                                         </span>
                                     )}
+
+                                    {isInvestor && userData.closedDealsCount !== undefined && (
+                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-green-100 text-green-800 border border-green-200 shadow-sm">
+                                            🤝 Deals Closed: {userData.closedDealsCount}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>

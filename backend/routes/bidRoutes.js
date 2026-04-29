@@ -227,4 +227,104 @@ router.post('/:id/accept', authMiddleware, async (req, res) => {
     }
 });
 
+// @route   GET /api/bids/my-offers
+// @desc    Get all active bids placed by the current investor (latest per pitch)
+// @access  Private (Investor)
+router.get('/my-offers', authMiddleware, async (req, res) => {
+    try {
+        const bids = await Bid.find({ investorId: req.user.id })
+            .populate('pitchId', 'title category financials.askAmount financials.equityOffered entrepreneurId')
+            .sort({ createdAt: -1 });
+
+        // Filter to keep only the latest bid per pitch
+        const latestBidsMap = new Map();
+        bids.forEach(bid => {
+            const pitchIdStr = bid.pitchId?._id?.toString() || bid.pitchId?.toString();
+            if (pitchIdStr && !latestBidsMap.has(pitchIdStr)) {
+                latestBidsMap.set(pitchIdStr, bid);
+            }
+        });
+
+        res.json(Array.from(latestBidsMap.values()));
+    } catch (error) {
+        console.error("Error fetching my offers:", error);
+        res.status(500).json({ message: "Server error fetching my offers" });
+    }
+});
+
+// @route   GET /api/bids/entrepreneur/hub
+// @desc    Get all bids received on the entrepreneur's pitches (with full details and latest logic)
+// @access  Private (Entrepreneur)
+router.get('/entrepreneur/hub', authMiddleware, async (req, res) => {
+    try {
+        const myPitches = await Pitch.find({ entrepreneurId: req.user.id }).select('_id title category');
+        const pitchIds = myPitches.map(p => p._id);
+
+        const bids = await Bid.find({ pitchId: { $in: pitchIds } })
+            .populate('investorId', 'name role avatarUrl')
+            .populate('pitchId', 'title category')
+            .sort({ createdAt: -1 });
+
+        res.json(bids);
+    } catch (error) {
+        console.error("Error fetching entrepreneur hub bids:", error);
+        res.status(500).json({ message: "Server error fetching hub bids" });
+    }
+});
+
+// @route   PUT /api/bids/:id/reject
+// @desc    Reject a bid
+// @access  Private (Entrepreneur)
+router.put('/:id/reject', authMiddleware, async (req, res) => {
+    try {
+        const bid = await Bid.findById(req.params.id).populate('pitchId');
+        if (!bid) {
+            return res.status(404).json({ message: 'Bid not found' });
+        }
+        
+        if (bid.pitchId.entrepreneurId.toString() !== req.user.id) {
+            return res.status(403).json({ message: 'Not authorized to reject this bid' });
+        }
+
+        bid.dealStatus = 'Rejected';
+        await bid.save();
+
+        res.json({ message: 'Bid rejected', bid });
+    } catch (error) {
+        console.error("Error rejecting bid:", error);
+        res.status(500).json({ message: "Server error rejecting bid" });
+    }
+});
+
+// @route   GET /api/bids/:id
+// @desc    Get a specific bid by ID
+// @access  Private
+router.get('/:id', authMiddleware, async (req, res) => {
+    try {
+        const bid = await Bid.findById(req.params.id)
+            .populate('investorId', 'name role email')
+            .populate({
+                path: 'pitchId',
+                populate: { path: 'entrepreneurId', select: 'name email' }
+            });
+
+        if (!bid) {
+            return res.status(404).json({ message: 'Bid not found' });
+        }
+
+        // Basic authorization: must be the investor who made it or the entrepreneur who received it
+        const isInvestor = bid.investorId._id.toString() === req.user.id;
+        const isEntrepreneur = bid.pitchId.entrepreneurId._id.toString() === req.user.id;
+
+        if (!isInvestor && !isEntrepreneur) {
+            return res.status(403).json({ message: 'Not authorized to view this bid' });
+        }
+
+        res.json(bid);
+    } catch (error) {
+        console.error("Error fetching bid:", error);
+        res.status(500).json({ message: "Server error fetching bid" });
+    }
+});
+
 module.exports = router;
