@@ -44,12 +44,31 @@ const userSchema = new mongoose.Schema({
     },
     verificationStatus: {
         type: String,
-        enum: ['unverified', 'pending', 'approved', 'rejected'],
+        enum: ['unverified', 'pending', 'verified', 'Verified', 'rejected'],
         default: 'unverified'
     },
     kycVideoUrl: {
         type: String
-    }
+    },
+    closedDealsCount: {
+        type: Number,
+        default: 0
+    },
+    investmentPortfolio: [{
+        pitchId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Pitch'
+        },
+        amount: Number,
+        equity: Number,
+        date: {
+            type: Date,
+            default: Date.now
+        }
+    }],
+    sectorsInvestedIn: [{
+        type: String
+    }]
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

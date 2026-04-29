@@ -20,6 +20,9 @@ const Explore = () => {
     const [industryFilter, setIndustryFilter] = useState('');
     const [searchLoading, setSearchLoading] = useState(false);
 
+    // Bid State — IDs of investors who have already bid on this entrepreneur's pitches
+    const [bidderIds, setBidderIds] = useState(new Set());
+
     // Modal State
     const [selectedInvestor, setSelectedInvestor] = useState(null);
 
@@ -38,8 +41,27 @@ const Explore = () => {
                     })
                 ]);
 
-                setCurrentUser(meRes.data);
+                const me = meRes.data;
+                setCurrentUser(me);
                 setUsers(matchesRes.data);
+
+                // If the viewer is an Entrepreneur, fetch all investors who have
+                // already bid on any of their pitches so we can hide "Send Pitch".
+                if (me.role === 'Entrepreneur') {
+                    try {
+                        const bidsRes = await axios.get(
+                            `${import.meta.env.VITE_API_URL}/api/bids/my-received`,
+                            { headers: { 'Authorization': `Bearer ${token}` } }
+                        );
+                        const ids = new Set(bidsRes.data.map(b =>
+                            b.investorId?._id || b.investorId
+                        ));
+                        setBidderIds(ids);
+                    } catch {
+                        // Non-fatal: if this endpoint isn't available, gracefully
+                        // degrade — the button will still show for all investors.
+                    }
+                }
             } catch (err) {
                 setError(err.response?.data?.message || 'Failed to fetch the directory. Ensure you have saved your profile first to generate an AI embedding!');
             } finally {
@@ -256,7 +278,8 @@ const Explore = () => {
                                         Message
                                     </button>
                                     
-                                    {currentUser?.role === 'Entrepreneur' && user.role === 'Investor' && (
+                                    {/* Hide "Send Pitch" if this investor has already bid on the entrepreneur's pitch */}
+                                    {currentUser?.role === 'Entrepreneur' && user.role === 'Investor' && !bidderIds.has(user._id) && (
                                         <button 
                                             onClick={() => setSelectedInvestor({ id: user._id, name: user.name })}
                                             className="w-full py-2.5 rounded-xl text-xs font-black uppercase tracking-wider bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-100 transition-all flex items-center justify-center gap-2"

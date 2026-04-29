@@ -63,7 +63,7 @@ exports.updateMyProfile = async (req, res) => {
             profile = await InvestorProfile.findOneAndUpdate(
                 { user: req.user.id },
                 { $set: updateData },
-                { new: true, upsert: true, setDefaultsOnInsert: true }
+                { returnDocument: 'after', upsert: true, setDefaultsOnInsert: true }
             );
         } else if (role === 'Entrepreneur') {
             embeddingText = `${updateData.companyName || ''} startup at ${updateData.startupStage || ''} stage seeking $${updateData.fundingGoal || ''}`;
@@ -75,7 +75,7 @@ exports.updateMyProfile = async (req, res) => {
             profile = await EntrepreneurProfile.findOneAndUpdate(
                 { user: req.user.id },
                 { $set: updateData },
-                { new: true, upsert: true, setDefaultsOnInsert: true }
+                { returnDocument: 'after', upsert: true, setDefaultsOnInsert: true }
             );
         } else {
             return res.status(400).json({ message: 'User role does not support profiles' });
@@ -91,7 +91,7 @@ exports.updateMyProfile = async (req, res) => {
 // GET /api/profiles/public/:userId
 exports.getPublicProfile = async (req, res) => {
     try {
-        const user = await User.findById(req.params.userId).select('name role createdAt');
+        const user = await User.findById(req.params.userId).select('name role createdAt closedDealsCount sectorsInvestedIn');
         if (!user) return res.status(404).json({ message: 'User not found' });
 
         let profile = null;

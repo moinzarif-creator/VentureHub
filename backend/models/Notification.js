@@ -12,7 +12,7 @@ const notificationSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['like', 'comment', 'bid', 'message', 'synergy_pitch', 'synergy_fomo', 'synergy_market', 'direct_pitch'],
+        enum: ['like', 'comment', 'bid', 'message', 'synergy_pitch', 'synergy_fomo', 'synergy_market', 'direct_pitch', 'final_bid', 'deal_accepted', 'deal_rejected'],
         required: true
     },
     referenceId: {
@@ -21,6 +21,9 @@ const notificationSchema = new mongoose.Schema({
     message: {
         type: String,
         required: true
+    },
+    link: {
+        type: String // Optional deep link for routing
     },
     isRead: {
         type: Boolean,

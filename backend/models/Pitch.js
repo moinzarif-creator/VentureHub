@@ -37,6 +37,11 @@ const pitchSchema = new mongoose.Schema({
     }],
     embedding: {
         type: [Number]
+    },
+    fundingStatus: {
+        type: String,
+        enum: ['Active', 'Funded'],
+        default: 'Active'
     }
 }, { timestamps: true });
 

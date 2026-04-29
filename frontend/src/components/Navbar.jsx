@@ -79,9 +79,11 @@ const Navbar = () => {
         
         const senderId = typeof notification.sender === 'object' ? notification.sender._id : notification.sender;
 
-        if (notification.type === 'comment' || notification.type === 'direct_pitch') {
+        if (notification.link) {
+            navigate(notification.link);
+        } else if (notification.type === 'comment' || notification.type === 'direct_pitch') {
             navigate(`/dashboard/pitch/${notification.referenceId}`);
-        } else if (['like', 'bid', 'synergy_pitch', 'synergy_fomo', 'synergy_market'].includes(notification.type)) {
+        } else if (['like', 'bid', 'synergy_pitch', 'synergy_fomo', 'synergy_market', 'final_bid', 'deal_accepted', 'deal_rejected'].includes(notification.type)) {
             navigate(`/profile/${senderId}`);
         } else if (notification.type === 'message') {
             navigate(`/chat/${senderId}`);
@@ -120,7 +122,18 @@ const Navbar = () => {
                             <Link to="/admin" className="text-amber-400 hover:text-amber-300 font-bold transition-colors">Admin Dashboard</Link>
                         ) : null}
                         <Link to="/dashboard" className="text-gray-200 hover:text-white font-medium transition-colors">Dashboard</Link>
-                        <Link to="/create-pitch" className="text-gray-200 hover:text-white font-medium transition-colors">Create Pitch</Link>
+                        
+                        {userRole === 'Investor' ? (
+                            <Link to="/my-offers" className="text-gray-200 hover:text-white font-medium transition-colors">My Offers</Link>
+                        ) : (
+                            <>
+                                <Link to="/create-pitch" className="text-gray-200 hover:text-white font-medium transition-colors">Create Pitch</Link>
+                                {userRole === 'Entrepreneur' && (
+                                    <Link to="/bids-hub" className="text-gray-200 hover:text-white font-medium transition-colors">Bids Hub</Link>
+                                )}
+                            </>
+                        )}
+                        
                         <Link to="/inbox" className="text-gray-200 hover:text-white font-medium transition-colors">Messages</Link>
                         <Link to="/profile" className="text-gray-200 hover:text-white font-medium transition-colors">My Profile</Link>
                         
