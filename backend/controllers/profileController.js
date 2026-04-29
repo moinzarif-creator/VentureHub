@@ -91,7 +91,7 @@ exports.updateMyProfile = async (req, res) => {
 // GET /api/profiles/public/:userId
 exports.getPublicProfile = async (req, res) => {
     try {
-        const user = await User.findById(req.params.userId).select('name role createdAt');
+        const user = await User.findById(req.params.userId).select('name role createdAt closedDealsCount sectorsInvestedIn');
         if (!user) return res.status(404).json({ message: 'User not found' });
 
         let profile = null;

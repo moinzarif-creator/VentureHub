@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const Bid = require('../models/Bid');
 const Pitch = require('../models/Pitch');
@@ -125,6 +126,104 @@ router.get('/check/:investorId', authMiddleware, async (req, res) => {
     } catch (error) {
         console.error("Error checking bid status:", error);
         res.status(500).json({ message: "Server error checking bid status" });
+    }
+});
+
+// @route   PUT /api/bids/:id/final
+// @desc    Submit a Final Bid (Investor updates bid to final)
+// @access  Private
+router.put('/:id/final', authMiddleware, async (req, res) => {
+    try {
+        const bid = await Bid.findById(req.params.id);
+        if (!bid) {
+            return res.status(404).json({ message: 'Bid not found' });
+        }
+        
+        if (bid.investorId.toString() !== req.user.id) {
+            return res.status(403).json({ message: 'Not authorized to update this bid' });
+        }
+
+        bid.isFinalBid = true;
+        await bid.save();
+
+        res.json({ message: 'Bid marked as final', bid });
+    } catch (error) {
+        console.error("Error updating final bid:", error);
+        res.status(500).json({ message: "Server error updating final bid" });
+    }
+});
+
+// @route   POST /api/bids/:id/accept
+// @desc    Accept a bid and finalize the deal
+// @access  Private (Entrepreneur)
+router.post('/:id/accept', authMiddleware, async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+        const bid = await Bid.findById(req.params.id).session(session);
+        if (!bid) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(404).json({ message: 'Bid not found' });
+        }
+
+        const pitch = await Pitch.findById(bid.pitchId).session(session);
+        if (!pitch) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(404).json({ message: 'Pitch not found' });
+        }
+
+        if (pitch.entrepreneurId.toString() !== req.user.id) {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(403).json({ message: 'Not authorized to accept bids for this pitch' });
+        }
+
+        // 1. Change the accepted Bid's dealStatus to 'Accepted'
+        bid.dealStatus = 'Accepted';
+        await bid.save({ session });
+
+        // 2. Change all other pending Bids on this specific Pitch to dealStatus: 'Rejected'
+        // Using dealStatus: { $ne: 'Accepted' } or simply missing dealStatus to be safe for legacy data
+        // The instructions say "Change all other pending Bids on this specific Pitch to dealStatus: 'Rejected'."
+        await Bid.updateMany(
+            { pitchId: pitch._id, _id: { $ne: bid._id }, dealStatus: { $in: ['Pending', null] } },
+            { $set: { dealStatus: 'Rejected' } },
+            { session }
+        );
+
+        // 3. Change the Pitch's fundingStatus to 'Funded'
+        pitch.fundingStatus = 'Funded';
+        await pitch.save({ session });
+
+        // 4. Increment the winning Investor's closedDealsCount by +1
+        // 5. Push the deal details to the winning Investor's investmentPortfolio array
+        const investor = await User.findById(bid.investorId).session(session);
+        if (investor) {
+            investor.closedDealsCount = (investor.closedDealsCount || 0) + 1;
+            
+            // To ensure safe array access
+            if (!investor.investmentPortfolio) investor.investmentPortfolio = [];
+            
+            investor.investmentPortfolio.push({
+                pitchId: pitch._id,
+                amount: bid.offerAmount,
+                equity: bid.offerEquity,
+                date: new Date()
+            });
+            await investor.save({ session });
+        }
+
+        await session.commitTransaction();
+        session.endSession();
+
+        res.json({ message: 'Deal accepted successfully', bid });
+    } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
+        console.error("Error accepting deal:", error);
+        res.status(500).json({ message: "Server error accepting deal" });
     }
 });
 
