@@ -35,6 +35,22 @@ const bidSchema = new mongoose.Schema({
         type: String,
         enum: ['Pending', 'Accepted', 'Rejected'],
         default: 'Pending'
+    },
+    lastModifiedBy: {
+        type: String,
+        enum: ['Investor', 'Entrepreneur'],
+        default: 'Investor'
+    },
+    negotiationHistory: [
+        {
+            offerAmount: Number,
+            offerEquity: Number,
+            modifiedBy: String,
+            timestamp: { type: Date, default: Date.now }
+        }
+    ],
+    expiryDate: {
+        type: Date
     }
 }, { timestamps: true });
 
