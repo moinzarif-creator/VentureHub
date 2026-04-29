@@ -15,7 +15,10 @@ const server = http.createServer(app);
 const io = initSocket(server);
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173', // Your React frontend URL
+  credentials: true
+}));
 app.use(express.json());
 
 const authRoutes = require('./routes/authRoutes');

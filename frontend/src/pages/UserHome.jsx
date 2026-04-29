@@ -12,7 +12,7 @@ const UserHome = () => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const res = await fetch('http://localhost:5000/api/home/stats');
+                const res = await fetch('http://localhost:5001/api/home/stats');
                 const data = await res.json();
                 if (data.success) {
                     setStats(data.data);
@@ -26,7 +26,7 @@ const UserHome = () => {
 
         const fetchNews = async () => {
             try {
-                const res = await fetch('http://localhost:5000/api/home/news');
+                const res = await fetch('http://localhost:5001/api/home/news');
                 const data = await res.json();
                 if (data.success) {
                     setNews(data.articles);
