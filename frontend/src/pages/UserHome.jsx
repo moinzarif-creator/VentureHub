@@ -9,10 +9,15 @@ const UserHome = () => {
     const [loadingStats, setLoadingStats] = useState(true);
     const [loadingNews, setLoadingNews] = useState(true);
 
+    // DYNAMIC URL FIX: 
+    // This checks for a Vite environment variable first, then defaults to localhost:5000
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const res = await fetch('http://localhost:5001/api/home/stats');
+                // Using the dynamic base URL instead of a hardcoded one
+                const res = await fetch(`${API_BASE_URL}/api/home/stats`);
                 const data = await res.json();
                 if (data.success) {
                     setStats(data.data);
@@ -26,7 +31,8 @@ const UserHome = () => {
 
         const fetchNews = async () => {
             try {
-                const res = await fetch('http://localhost:5001/api/home/news');
+                // Using the dynamic base URL instead of a hardcoded one
+                const res = await fetch(`${API_BASE_URL}/api/home/news`);
                 const data = await res.json();
                 if (data.success) {
                     setNews(data.articles);
@@ -40,7 +46,7 @@ const UserHome = () => {
 
         fetchStats();
         fetchNews();
-    }, []);
+    }, [API_BASE_URL]); // Added to dependency array to prevent warnings
 
     return (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

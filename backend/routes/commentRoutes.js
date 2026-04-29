@@ -12,7 +12,12 @@ const { notifyFollowers, notifyInvestorFOMO } = require('../utils/trackingNotifi
 // @access  Private
 router.post('/', authMiddleware, async (req, res) => {
     try {
-        const { text, pitchId } = req.body;
+        const { text, pitchId, parentCommentId } = req.body;
+        const user = await User.findById(req.user.id);
+
+        if (!user || !user.isPhoneVerified) {
+            return res.status(403).json({ message: 'Please verify your phone number to post comments' });
+        }
 
         if (!text || !pitchId) {
             return res.status(400).json({ message: 'Please provide text and pitchId' });
@@ -21,7 +26,8 @@ router.post('/', authMiddleware, async (req, res) => {
         const newComment = new Comment({
             text,
             author: req.user.id,
-            pitchId
+            pitchId,
+            parentCommentId: parentCommentId || null
         });
 
         let savedComment = await newComment.save();

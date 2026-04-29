@@ -17,7 +17,14 @@ const Profile = () => {
     const [bidsError, setBidsError] = useState('');
 
     const [kycFile, setKycFile] = useState(null);
+    const [nidFront, setNidFront] = useState(null);
+    const [nidBack, setNidBack] = useState(null);
+    const [taxDoc, setTaxDoc] = useState(null);
     const [kycLoading, setKycLoading] = useState(false);
+
+    // Negotiation State
+    const [isCountering, setIsCountering] = useState(null); // ID of bid being countered
+    const [counterData, setCounterData] = useState({ bidAmount: '', equityRequested: '' });
 
     // Payment State
     const [isProcessing, setIsProcessing] = useState(false);
@@ -105,26 +112,59 @@ const Profile = () => {
         }
     };
 
-    const handleKycSubmit = async (e) => {
+    const handleKycDocsSubmit = async (e) => {
         e.preventDefault();
-        if (!kycFile) return;
+        if (!nidFront || !nidBack || !taxDoc) {
+            toast.error('Please select all required documents');
+            return;
+        }
 
         setKycLoading(true);
         const fd = new FormData();
-        fd.append('kycVideo', kycFile);
+        fd.append('nidFront', nidFront);
+        fd.append('nidBack', nidBack);
+        fd.append('taxDoc', taxDoc);
 
         try {
             const token = localStorage.getItem('token');
-            const res = await axios.put(`${import.meta.env.VITE_API_URL}/api/auth/kyc-upload`, fd, {
+            const res = await axios.put(`${import.meta.env.VITE_API_URL}/api/auth/kyc-docs`, fd, {
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'multipart/form-data' }
             });
-            setUser(res.data);
-            setKycFile(null);
-            toast.success('KYC video uploaded successfully! Under review.');
+            setUser({ ...user, kycDocuments: res.data.kycDocuments });
+            toast.success('KYC documents uploaded successfully! Verification pending.');
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Error uploading KYC video');
+            toast.error(err.response?.data?.message || 'Error uploading KYC documents');
         } finally {
             setKycLoading(false);
+        }
+    };
+
+    const handleBidStatusUpdate = async (bidId, status) => {
+        try {
+            const token = localStorage.getItem('token');
+            await axios.put(`${import.meta.env.VITE_API_URL}/api/bids/${bidId}/status`, { status }, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            toast.success(`Bid ${status.toLowerCase()} successfully`);
+            // Refresh bids
+            toggleViewBids(viewingBidsFor);
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Error updating bid status');
+        }
+    };
+
+    const handleCounterOffer = async (bidId) => {
+        try {
+            const token = localStorage.getItem('token');
+            await axios.put(`${import.meta.env.VITE_API_URL}/api/bids/${bidId}/counter`, counterData, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            toast.success('Counter-offer sent successfully!');
+            setIsCountering(null);
+            setCounterData({ bidAmount: '', equityRequested: '' });
+            toggleViewBids(viewingBidsFor);
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Error sending counter-offer');
         }
     };
 
@@ -512,25 +552,45 @@ const Profile = () => {
                         {/* KYC Upload Form */}
                         {(user.verificationStatus === 'unverified' || user.verificationStatus === 'rejected') && !user.isVerified && (
                             <div className="mt-6 bg-white p-6 rounded-xl shadow-md border border-gray-100">
-                                <h3 className="text-lg font-bold text-gray-800 mb-2">Upload KYC Video</h3>
-                                <p className="text-sm text-gray-600 mb-4">To ensure trust on VentureHive, we require a short video of you stating your full name and acknowledging your registration.</p>
-                                <form onSubmit={handleKycSubmit} className="flex flex-col gap-4 max-w-lg">
+                                <h3 className="text-lg font-bold text-gray-800 mb-2">KYC Document Vault</h3>
+                                <p className="text-sm text-gray-600 mb-4">Please upload your NID (Front & Back) and your Tax Identification (TIN) certificate for full verification.</p>
+                                <form onSubmit={handleKycDocsSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Select Video (MP4, AVI, MOV)</label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">NID Front</label>
                                         <input
                                             type="file"
-                                            accept="video/*"
-                                            onChange={(e) => setKycFile(e.target.files[0])}
-                                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border border-gray-200 rounded-lg p-2 transition-colors"
+                                            accept="image/*"
+                                            onChange={(e) => setNidFront(e.target.files[0])}
+                                            className="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border p-1 rounded bg-white"
+                                            required
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">NID Back</label>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => setNidBack(e.target.files[0])}
+                                            className="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border p-1 rounded bg-white"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Tax Document (TIN)</label>
+                                        <input
+                                            type="file"
+                                            accept="image/*,application/pdf"
+                                            onChange={(e) => setTaxDoc(e.target.files[0])}
+                                            className="block w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border p-1 rounded bg-white"
                                             required
                                         />
                                     </div>
                                     <button
                                         type="submit"
-                                        disabled={!kycFile || kycLoading}
-                                        className={`self-start px-6 py-2.5 rounded-lg text-white font-medium shadow-sm transition-colors ${!kycFile || kycLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+                                        disabled={kycLoading}
+                                        className={`md:col-span-2 px-6 py-2.5 rounded-lg text-white font-medium shadow-sm transition-colors ${kycLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
                                     >
-                                        {kycLoading ? 'Uploading User Video...' : 'Submit Verification Video'}
+                                        {kycLoading ? 'Uploading Documents...' : 'Submit Documents for Verification'}
                                     </button>
                                 </form>
                             </div>
@@ -638,14 +698,92 @@ const Profile = () => {
                                                 <div className="space-y-3">
                                                     <h4 className="text-sm font-semibold text-gray-800 mb-2 border-b border-blue-200 pb-1">Current Offers ({activePitchBids.length})</h4>
                                                     {activePitchBids.map(bid => (
-                                                        <div key={bid._id} className="bg-white p-3 rounded border border-blue-100 shadow-sm text-sm flex justify-between items-center bg-gradient-to-r from-white to-blue-50/30">
-                                                            <div>
-                                                                <span className="font-semibold text-gray-800">{bid.investorId?.name || 'Unknown Investor'}</span>
-                                                                <p className="text-xs text-gray-500 mt-1">Requested <span className="font-medium text-gray-700">{bid.offerEquity}%</span> equity</p>
+                                                        <div key={bid._id} className="bg-white p-4 rounded-lg border border-blue-100 shadow-sm text-sm flex flex-col gap-3 bg-gradient-to-r from-white to-blue-50/30">
+                                                            <div className="flex justify-between items-center">
+                                                                <div>
+                                                                    <span className="font-bold text-gray-900 text-base">{bid.investorId?.name || 'Unknown Investor'}</span>
+                                                                    <div className="flex items-center gap-2 mt-1">
+                                                                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                                                            bid.status === 'Accepted' ? 'bg-green-100 text-green-700' : 
+                                                                            bid.status === 'Countered' ? 'bg-yellow-100 text-yellow-700' : 
+                                                                            'bg-blue-100 text-blue-700'
+                                                                        }`}>
+                                                                            {bid.status}
+                                                                        </span>
+                                                                        <span className="text-xs text-gray-400">Last update: {bid.lastModifiedBy}</span>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <div className="font-bold text-green-600 text-lg">${bid.offerAmount.toLocaleString()}</div>
+                                                                    <div className="text-xs font-semibold text-blue-600">{bid.offerEquity}% Equity</div>
+                                                                </div>
                                                             </div>
-                                                            <div className="font-bold text-green-600 text-base">
-                                                                ${bid.offerAmount ? bid.offerAmount.toLocaleString() : '0'}
-                                                            </div>
+
+                                                            {/* Negotiation Controls */}
+                                                            {bid.status !== 'Accepted' && bid.status !== 'Rejected' && (
+                                                                <div className="flex gap-2 mt-2 pt-3 border-t border-gray-100">
+                                                                    {bid.lastModifiedBy === 'Investor' ? (
+                                                                        <>
+                                                                            <button 
+                                                                                onClick={() => handleBidStatusUpdate(bid._id, 'Accepted')}
+                                                                                className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 rounded font-bold transition-colors"
+                                                                            >
+                                                                                Accept
+                                                                            </button>
+                                                                            <button 
+                                                                                onClick={() => setIsCountering(bid._id)}
+                                                                                className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-2 rounded font-bold transition-colors"
+                                                                            >
+                                                                                Counter
+                                                                            </button>
+                                                                        </>
+                                                                    ) : (
+                                                                        <div className="w-full text-center text-xs font-medium text-gray-500 bg-gray-50 py-2 rounded">
+                                                                            Waiting for Investor response...
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
+
+                                                            {/* Counter Offer Form */}
+                                                            {isCountering === bid._id && (
+                                                                <div className="mt-3 p-3 bg-gray-50 rounded border border-yellow-200 animate-fade-in-down">
+                                                                    <div className="grid grid-cols-2 gap-3 mb-3">
+                                                                        <div>
+                                                                            <label className="text-[10px] uppercase font-bold text-gray-500">New Amount ($)</label>
+                                                                            <input 
+                                                                                type="number" 
+                                                                                className="w-full p-2 border rounded" 
+                                                                                value={counterData.bidAmount}
+                                                                                onChange={(e) => setCounterData({...counterData, bidAmount: e.target.value})}
+                                                                            />
+                                                                        </div>
+                                                                        <div>
+                                                                            <label className="text-[10px] uppercase font-bold text-gray-500">Equity (%)</label>
+                                                                            <input 
+                                                                                type="number" 
+                                                                                className="w-full p-2 border rounded" 
+                                                                                value={counterData.equityRequested}
+                                                                                onChange={(e) => setCounterData({...counterData, equityRequested: e.target.value})}
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex gap-2">
+                                                                        <button 
+                                                                            onClick={() => handleCounterOffer(bid._id)}
+                                                                            className="flex-1 bg-yellow-600 text-white py-2 rounded font-bold text-xs"
+                                                                        >
+                                                                            Send Counter
+                                                                        </button>
+                                                                        <button 
+                                                                            onClick={() => setIsCountering(null)}
+                                                                            className="px-4 py-2 bg-gray-300 text-gray-700 rounded font-bold text-xs"
+                                                                        >
+                                                                            Cancel
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     ))}
                                                 </div>
