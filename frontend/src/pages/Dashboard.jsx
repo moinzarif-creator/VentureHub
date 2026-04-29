@@ -7,6 +7,7 @@ const Dashboard = () => {
     const navigate = useNavigate();
     const toast = useToast();
     const [pitches, setPitches] = useState([]);
+    const [currentUser, setCurrentUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -25,7 +26,9 @@ const Dashboard = () => {
     const [minAsk, setMinAsk] = useState('');
     const [maxAsk, setMaxAsk] = useState('');
     const [selectedTag, setSelectedTag] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState([]); // Array for multi-select
+    const [minEquity, setMinEquity] = useState('');
+    const [maxEquity, setMaxEquity] = useState('');
 
     const fetchPitches = async () => {
         setLoading(true);
@@ -36,15 +39,21 @@ const Dashboard = () => {
             if (minAsk) params.minAsk = minAsk;
             if (maxAsk) params.maxAsk = maxAsk;
             if (selectedTag) params.tag = selectedTag;
-            if (selectedCategory) params.category = selectedCategory;
+            if (selectedCategory.length > 0) params.category = selectedCategory.join(',');
+            if (minEquity) params.minEquity = minEquity;
+            if (maxEquity) params.maxEquity = maxEquity;
 
-            const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/pitches`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                params
-            });
-            setPitches(res.data);
+            const [pitchesRes, meRes] = await Promise.all([
+                axios.get(`${import.meta.env.VITE_API_URL}/api/pitches`, {
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    params
+                }),
+                axios.get(`${import.meta.env.VITE_API_URL}/api/auth/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+            ]);
+            setPitches(pitchesRes.data);
+            setCurrentUser(meRes.data);
         } catch (err) {
             setError(err.response?.data?.message || 'Error fetching pitches');
         } finally {
@@ -67,6 +76,31 @@ const Dashboard = () => {
             setActiveBidPitchId(pitchId);
             setBidData({ bidAmount: '', equityRequested: '', termsAndConditions: '' });
             setBidSuccess(null);
+        }
+    };
+
+    const handleCommentSubmit = async (e, pitchId) => {
+        e.preventDefault();
+        if (!currentUser?.isPhoneVerified) {
+            return toast.error('Please verify your phone number to comment');
+        }
+        if (!newCommentText.trim()) return;
+        setBidSuccess(null);
+
+        try {
+            const token = localStorage.getItem('token');
+            await axios.post(`${import.meta.env.VITE_API_URL}/api/comments`,
+                { pitchId, text: newCommentText },
+                { headers: { 'Authorization': `Bearer ${token}` } }
+            );
+            setNewCommentText('');
+            // Refresh comments
+            const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/comments/pitch/${pitchId}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            setActivePitchComments(res.data);
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Error posting comment');
         }
     };
 
@@ -96,6 +130,9 @@ const Dashboard = () => {
     };
 
     const handleLike = async (pitchId) => {
+        if (!currentUser?.isPhoneVerified) {
+            return toast.error('Please verify your phone number to like pitches');
+        }
         try {
             const token = localStorage.getItem('token');
             const res = await axios.put(`${import.meta.env.VITE_API_URL}/api/pitches/${pitchId}/like`, {}, {
@@ -143,23 +180,11 @@ const Dashboard = () => {
         }
     };
 
-    const handleCommentSubmit = async (e, pitchId) => {
-        e.preventDefault();
-        if (!newCommentText.trim()) return;
-
-        try {
-            const token = localStorage.getItem('token');
-            const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/comments`,
-                { text: newCommentText, pitchId },
-                { headers: { 'Authorization': `Bearer ${token}` } }
-            );
-
-            // Instantly add the new comment to the UI array
-            setActivePitchComments([...activePitchComments, res.data]);
-            setNewCommentText('');
-            toast.success('Comment posted!');
-        } catch (err) {
-            toast.error(err.response?.data?.message || 'Error posting comment');
+    const handleCategoryToggle = (cat) => {
+        if (selectedCategory.includes(cat)) {
+            setSelectedCategory(selectedCategory.filter(c => c !== cat));
+        } else {
+            setSelectedCategory([...selectedCategory, cat]);
         }
     };
 
@@ -201,23 +226,24 @@ const Dashboard = () => {
                             </div>
                         </div>
 
-                        <div className="flex gap-2 w-full md:w-auto">
-                            <div className="w-1/2 md:w-40">
-                                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Category</label>
-                                <select
-                                    value={selectedCategory}
-                                    onChange={(e) => setSelectedCategory(e.target.value)}
-                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors text-sm"
-                                >
-                                    <option value="">All Categories</option>
-                                    <option value="Fintech">Fintech</option>
-                                    <option value="Healthcare">Healthcare</option>
-                                    <option value="EdTech">EdTech</option>
-                                    <option value="E-commerce">E-commerce</option>
-                                    <option value="AI">AI/Machine Learning</option>
-                                    <option value="GreenTech">GreenTech</option>
-                                    <option value="SaaS">SaaS</option>
-                                </select>
+                            <div className="w-full">
+                                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Categories (Multi-Select)</label>
+                                <div className="flex flex-wrap gap-2 bg-gray-50 p-2 border border-gray-300 rounded-lg min-h-[42px]">
+                                    {['Fintech', 'Healthcare', 'EdTech', 'E-commerce', 'AI', 'GreenTech', 'SaaS', 'Web3'].map(cat => (
+                                        <button
+                                            key={cat}
+                                            type="button"
+                                            onClick={() => handleCategoryToggle(cat)}
+                                            className={`px-3 py-1 rounded-full text-[10px] font-black uppercase transition-all ${
+                                                selectedCategory.includes(cat) 
+                                                ? 'bg-blue-600 text-white shadow-md' 
+                                                : 'bg-white text-gray-400 border border-gray-200 hover:border-blue-300'
+                                            }`}
+                                        >
+                                            {cat}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
 
                             <div className="w-1/2 md:w-40 flex-shrink-0">
@@ -230,7 +256,6 @@ const Dashboard = () => {
                                     className="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors text-sm"
                                 />
                             </div>
-                        </div>
 
                         <div className="flex gap-2 w-full md:w-auto">
                             <div className="w-1/2 md:w-32">
@@ -240,8 +265,7 @@ const Dashboard = () => {
                                     value={minAsk}
                                     onChange={(e) => setMinAsk(e.target.value)}
                                     placeholder="Min"
-                                    min="0"
-                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors text-sm"
+                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm"
                                 />
                             </div>
                             <div className="w-1/2 md:w-32">
@@ -251,8 +275,30 @@ const Dashboard = () => {
                                     value={maxAsk}
                                     onChange={(e) => setMaxAsk(e.target.value)}
                                     placeholder="Max"
-                                    min="0"
-                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-colors text-sm"
+                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2 w-full md:w-auto">
+                            <div className="w-1/2 md:w-32">
+                                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Min Equity (%)</label>
+                                <input
+                                    type="number"
+                                    value={minEquity}
+                                    onChange={(e) => setMinEquity(e.target.value)}
+                                    placeholder="Min %"
+                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm"
+                                />
+                            </div>
+                            <div className="w-1/2 md:w-32">
+                                <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-1">Max Equity (%)</label>
+                                <input
+                                    type="number"
+                                    value={maxEquity}
+                                    onChange={(e) => setMaxEquity(e.target.value)}
+                                    placeholder="Max %"
+                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-lg text-sm"
                                 />
                             </div>
                         </div>

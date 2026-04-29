@@ -11,6 +11,9 @@ const PitchDetail = () => {
     const [currentUser, setCurrentUser] = useState(null); // ADDED
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [comments, setComments] = useState([]);
+    const [commentText, setCommentText] = useState('');
+    const [replyingTo, setReplyingTo] = useState(null); // { id: string, name: string }
 
     useEffect(() => {
         const fetchPitch = async () => {
@@ -26,6 +29,13 @@ const PitchDetail = () => {
                 ]);
                 setPitch(pitchRes.data);
                 setCurrentUser(userRes.data);
+                
+                // Fetch Comments
+                const commentsRes = await axios.get(`${import.meta.env.VITE_API_URL}/api/comments/pitch/${id}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                setComments(commentsRes.data);
+
                 setLoading(false);
             } catch (err) {
                 console.error("Error fetching pitch details", err);
@@ -61,6 +71,76 @@ const PitchDetail = () => {
         } finally {
             setBidLoading(false);
         }
+    };
+
+    const handleCommentSubmit = async (e) => {
+        e.preventDefault();
+        if (!currentUser?.isPhoneVerified) {
+            return toast.error('Please verify your phone number to comment');
+        }
+        if (!commentText.trim()) return;
+
+        try {
+            const token = localStorage.getItem('token');
+            const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/comments`, {
+                text: commentText,
+                pitchId: id,
+                parentCommentId: replyingTo?.id || null
+            }, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            setComments([...comments, res.data]);
+            setCommentText('');
+            setReplyingTo(null);
+            toast.success('Comment posted!');
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Error posting comment');
+        }
+    };
+
+    const handleLike = async () => {
+        if (!currentUser?.isPhoneVerified) {
+            return toast.error('Please verify your phone number to like pitches');
+        }
+        try {
+            const token = localStorage.getItem('token');
+            const res = await axios.put(`${import.meta.env.VITE_API_URL}/api/pitches/${id}/like`, {}, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            setPitch({ ...pitch, likes: res.data });
+        } catch (err) {
+            toast.error(err.response?.data?.message || 'Error updating like status');
+        }
+    };
+
+    const renderComments = (parentId = null, depth = 0) => {
+        return comments
+            .filter(c => c.parentCommentId === parentId)
+            .map(comment => (
+                <div key={comment._id} className={`mt-4 ${depth > 0 ? 'ml-8 border-l-2 border-gray-100 pl-4' : ''}`}>
+                    <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                        <div className="flex justify-between items-start mb-2">
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 font-bold text-xs uppercase">
+                                    {comment.author?.name?.charAt(0)}
+                                </div>
+                                <div>
+                                    <p className="text-sm font-black text-gray-900">{comment.author?.name}</p>
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase">{comment.author?.role}</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setReplyingTo({ id: comment._id, name: comment.author?.name })}
+                                className="text-xs font-black text-blue-600 hover:text-blue-700 uppercase tracking-widest"
+                            >
+                                Reply
+                            </button>
+                        </div>
+                        <p className="text-gray-700 text-sm leading-relaxed">{comment.text}</p>
+                    </div>
+                    {renderComments(comment._id, depth + 1)}
+                </div>
+            ));
     };
 
     if (loading) return <div className="text-center mt-20 text-gray-500 animate-pulse">Loading pitch details...</div>;
@@ -231,6 +311,67 @@ const PitchDetail = () => {
                     )}
                 </div>
             )}
+
+            {/* --- Social & Comments Section --- */}
+            <div className="mt-12 bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+                <div className="p-8 border-b border-gray-100 flex justify-between items-center">
+                    <h2 className="text-2xl font-black text-gray-900">Engagement</h2>
+                    <button 
+                        onClick={handleLike}
+                        className={`flex items-center gap-2 px-6 py-2 rounded-2xl font-black transition-all ${
+                            pitch.likes?.includes(currentUser?._id) 
+                            ? 'bg-red-50 text-red-600 border border-red-100' 
+                            : 'bg-gray-100 text-gray-600 border border-transparent hover:bg-gray-200'
+                        }`}
+                    >
+                        <span>{pitch.likes?.includes(currentUser?._id) ? '❤️' : '🤍'}</span>
+                        <span>{pitch.likes?.length || 0} Likes</span>
+                    </button>
+                </div>
+                
+                <div className="p-8">
+                    <div className="mb-10">
+                        <form onSubmit={handleCommentSubmit} className="space-y-4">
+                            {replyingTo && (
+                                <div className="flex justify-between items-center bg-blue-50 px-4 py-2 rounded-xl border border-blue-100">
+                                    <p className="text-xs font-bold text-blue-700">Replying to <span className="font-black">@{replyingTo.name}</span></p>
+                                    <button onClick={() => setReplyingTo(null)} className="text-blue-500 hover:text-blue-700">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                    </button>
+                                </div>
+                            )}
+                            <textarea 
+                                className="w-full bg-gray-50 border-none rounded-2xl px-6 py-4 focus:ring-2 focus:ring-blue-500 font-bold"
+                                placeholder={replyingTo ? "Write your reply..." : "Ask a question or leave feedback..."}
+                                rows="3"
+                                value={commentText}
+                                onChange={(e) => setCommentText(e.target.value)}
+                            />
+                            <div className="flex justify-end">
+                                <button 
+                                    type="submit"
+                                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-2xl font-black shadow-lg transition-all transform active:scale-95"
+                                >
+                                    {replyingTo ? 'Post Reply' : 'Post Comment'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div className="space-y-6">
+                        <h3 className="text-lg font-black text-gray-900 border-l-4 border-blue-600 pl-4 mb-6 uppercase tracking-wider">
+                            Discussion ({comments.length})
+                        </h3>
+                        {comments.length === 0 ? (
+                            <div className="text-center py-10 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
+                                <p className="text-gray-400 font-bold italic">No comments yet. Be the first to start the conversation!</p>
+                            </div>
+                        ) : (
+                            renderComments(null)
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };

@@ -15,8 +15,8 @@ const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
     params: {
         folder: 'venturehive_kyc',
-        allowed_formats: ['mp4', 'mov', 'avi', 'webm'],
-        resource_type: 'video'
+        allowed_formats: ['mp4', 'mov', 'avi', 'webm', 'jpg', 'jpeg', 'png', 'pdf'],
+        resource_type: 'auto'
     }
 });
 const upload = multer({ storage });
@@ -237,6 +237,35 @@ router.put('/kyc-upload', authMiddleware, upload.single('kycVideo'), async (req,
     } catch (error) {
         console.error('Error uploading KYC:', error);
         res.status(500).json({ message: 'Server Error processing KYC upload' });
+    }
+});
+
+// @route   PUT /api/auth/kyc-docs
+// @desc    Upload KYC documents (NID and Tax)
+// @access  Private
+router.put('/kyc-docs', authMiddleware, upload.fields([
+    { name: 'nidFront', maxCount: 1 },
+    { name: 'nidBack', maxCount: 1 },
+    { name: 'taxDoc', maxCount: 1 }
+]), async (req, res) => {
+    try {
+        const user = await User.findById(req.user.id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        if (req.files.nidFront) user.kycDocuments.nidFrontUrl = req.files.nidFront[0].path;
+        if (req.files.nidBack) user.kycDocuments.nidBackUrl = req.files.nidBack[0].path;
+        if (req.files.taxDoc) user.kycDocuments.taxDocUrl = req.files.taxDoc[0].path;
+
+        user.kycDocuments.status = 'pending';
+        await user.save();
+
+        res.json({
+            id: user.id,
+            kycDocuments: user.kycDocuments
+        });
+    } catch (error) {
+        console.error('Error uploading KYC documents:', error);
+        res.status(500).json({ message: 'Server Error processing document upload' });
     }
 });
 

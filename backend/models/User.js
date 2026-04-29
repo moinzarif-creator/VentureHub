@@ -32,6 +32,10 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    isPhoneVerified: {
+        type: Boolean,
+        default: false
+    },
     verificationToken: {
         type: String
     },
@@ -68,7 +72,17 @@ const userSchema = new mongoose.Schema({
     }],
     sectorsInvestedIn: [{
         type: String
-    }]
+    }],
+    kycDocuments: {
+        nidFrontUrl: String,
+        nidBackUrl: String,
+        taxDocUrl: String,
+        status: {
+            type: String,
+            enum: ['pending', 'verified', 'rejected'],
+            default: 'pending'
+        }
+    }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);

@@ -107,16 +107,19 @@ router.get('/', authMiddleware, async (req, res) => {
         let queryEmbedding = [];
         let vectorSearchMode = false;
 
-        // 1. Keyword Search (AI Semantic Search fallback to Text)
+        // 1. Keyword Search (AI Semantic Search fallback to Fuzzy Text)
         if (search) {
             queryEmbedding = await generateEmbedding(search);
             if (queryEmbedding && queryEmbedding.length > 0) {
                 vectorSearchMode = true;
             } else {
+                // Fuzzy fallback using regex
+                const fuzzySearch = search.split(' ').join('.*');
                 query.$or = [
-                    { title: { $regex: search, $options: 'i' } },
-                    { 'content.problem': { $regex: search, $options: 'i' } },
-                    { 'content.solution': { $regex: search, $options: 'i' } }
+                    { title: { $regex: fuzzySearch, $options: 'i' } },
+                    { 'content.problem': { $regex: fuzzySearch, $options: 'i' } },
+                    { 'content.solution': { $regex: fuzzySearch, $options: 'i' } },
+                    { tags: { $regex: fuzzySearch, $options: 'i' } }
                 ];
             }
         }
@@ -128,14 +131,23 @@ router.get('/', authMiddleware, async (req, res) => {
             if (maxAsk) query['financials.askAmount'].$lte = Number(maxAsk);
         }
 
-        // 3. Category Filter
+        // 3. Category Filter (Supports Array/Multi-select)
         if (category) {
-            query.category = category;
+            const categories = Array.isArray(category) ? category : category.split(',');
+            query.category = { $in: categories };
         }
 
         // 4. Tag Filter
         if (tag) {
-            query.tags = { $regex: new RegExp(`^${tag}$`, 'i') }; // Exact case-insensitive match inside array
+            query.tags = { $regex: new RegExp(`^${tag}$`, 'i') };
+        }
+
+        // 5. Equity Range Filter
+        const { minEquity, maxEquity } = req.query;
+        if (minEquity || maxEquity) {
+            query['financials.equityOffered'] = {};
+            if (minEquity) query['financials.equityOffered'].$gte = Number(minEquity);
+            if (maxEquity) query['financials.equityOffered'].$lte = Number(maxEquity);
         }
 
         let pitches = await Pitch.find(query)
@@ -180,6 +192,11 @@ router.get('/', authMiddleware, async (req, res) => {
 // @access  Private
 router.put('/:id/like', authMiddleware, async (req, res) => {
     try {
+        const user = await User.findById(req.user.id);
+        if (!user || !user.isPhoneVerified) {
+            return res.status(403).json({ message: 'Please verify your phone number to like pitches' });
+        }
+
         const pitch = await Pitch.findById(req.params.id);
 
         if (!pitch) {
