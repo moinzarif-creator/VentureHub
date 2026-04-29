@@ -64,6 +64,10 @@ app.use('/api/users', userRoutes);
 const exploreRoutes = require('./routes/exploreRoutes');
 app.use('/api/explore', exploreRoutes);
 
+const homeRoutes = require('./routes/homeRoutes');
+// Home Routes
+app.use('/api/home', homeRoutes);
+
 // Notification Routes
 app.use('/api/notifications', notificationRoutes);
 
