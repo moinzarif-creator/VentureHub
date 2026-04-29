@@ -79,9 +79,11 @@ const Navbar = () => {
         
         const senderId = typeof notification.sender === 'object' ? notification.sender._id : notification.sender;
 
-        if (notification.type === 'comment' || notification.type === 'direct_pitch') {
+        if (notification.link) {
+            navigate(notification.link);
+        } else if (notification.type === 'comment' || notification.type === 'direct_pitch') {
             navigate(`/dashboard/pitch/${notification.referenceId}`);
-        } else if (['like', 'bid', 'synergy_pitch', 'synergy_fomo', 'synergy_market'].includes(notification.type)) {
+        } else if (['like', 'bid', 'synergy_pitch', 'synergy_fomo', 'synergy_market', 'final_bid', 'deal_accepted', 'deal_rejected'].includes(notification.type)) {
             navigate(`/profile/${senderId}`);
         } else if (notification.type === 'message') {
             navigate(`/chat/${senderId}`);

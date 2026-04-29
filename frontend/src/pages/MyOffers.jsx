@@ -9,7 +9,10 @@ const MyOffers = () => {
     const [error, setError] = useState('');
 
     const [ddModalOpen, setDdModalOpen] = useState(false);
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [selectedBid, setSelectedBid] = useState(null);
     const [selectedBidId, setSelectedBidId] = useState(null);
+    const [editForm, setEditForm] = useState({ offerAmount: '', offerEquity: '', termsAndConditions: '' });
     const [ddChecks, setDdChecks] = useState({
         financial: false,
         legal: false,
@@ -37,10 +40,25 @@ const MyOffers = () => {
         }
     };
 
-    const handleOpenDDModal = (bidId) => {
-        setSelectedBidId(bidId);
+    const handleOpenEditModal = (bid) => {
+        setSelectedBid(bid);
+        setSelectedBidId(bid._id);
+        setEditForm({
+            offerAmount: bid.offerAmount || '',
+            offerEquity: bid.offerEquity || '',
+            termsAndConditions: bid.termsAndConditions || ''
+        });
+        setEditModalOpen(true);
+    };
+
+    const handleProceedToDD = () => {
+        setEditModalOpen(false);
         setDdChecks({ financial: false, legal: false, technical: false, reference: false });
         setDdModalOpen(true);
+    };
+
+    const handleEditFormChange = (e) => {
+        setEditForm({ ...editForm, [e.target.name]: e.target.value });
     };
 
     const handleCheckboxChange = (e) => {
@@ -55,7 +73,11 @@ const MyOffers = () => {
         setSubmittingFinal(true);
         try {
             const token = localStorage.getItem('token');
-            await axios.put(`${import.meta.env.VITE_API_URL}/api/bids/${selectedBidId}/final`, {}, {
+            await axios.put(`${import.meta.env.VITE_API_URL}/api/bids/${selectedBidId}/final`, {
+                offerAmount: Number(editForm.offerAmount),
+                offerEquity: Number(editForm.offerEquity),
+                termsAndConditions: editForm.termsAndConditions
+            }, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             
@@ -121,7 +143,7 @@ const MyOffers = () => {
                                     <div className="mt-6 flex justify-end">
                                         {!bid.isFinalBid && (!bid.dealStatus || bid.dealStatus === 'Pending') && (
                                             <button
-                                                onClick={() => handleOpenDDModal(bid._id)}
+                                                onClick={() => handleOpenEditModal(bid)}
                                                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-6 rounded-lg shadow-sm transition-colors transform active:scale-95"
                                             >
                                                 Submit Final Bid
@@ -140,6 +162,61 @@ const MyOffers = () => {
                     </div>
                 )}
             </div>
+
+            {/* Edit Final Terms Modal */}
+            {editModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 px-4">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-fade-in-up">
+                        <div className="bg-indigo-600 p-6 text-white text-center relative">
+                            <h3 className="text-2xl font-black tracking-tight">Edit Final Terms</h3>
+                            <p className="text-indigo-200 text-sm mt-1">Review and finalize your offer</p>
+                            <button onClick={() => setEditModalOpen(false)} className="absolute top-4 right-4 text-white hover:text-indigo-200">
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </div>
+                        <div className="p-8 space-y-4">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Investment Amount ($)</label>
+                                <input
+                                    type="number"
+                                    name="offerAmount"
+                                    value={editForm.offerAmount}
+                                    onChange={handleEditFormChange}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Equity Requested (%)</label>
+                                <input
+                                    type="number"
+                                    name="offerEquity"
+                                    value={editForm.offerEquity}
+                                    onChange={handleEditFormChange}
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-1">Terms & Conditions</label>
+                                <textarea
+                                    name="termsAndConditions"
+                                    value={editForm.termsAndConditions}
+                                    onChange={handleEditFormChange}
+                                    rows="3"
+                                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
+                                ></textarea>
+                            </div>
+                            <div className="mt-8">
+                                <button
+                                    onClick={handleProceedToDD}
+                                    className="w-full py-4 rounded-xl font-black text-lg transition-all shadow-md bg-indigo-600 hover:bg-indigo-700 text-white transform active:scale-95"
+                                >
+                                    Save & Continue
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Due Diligence Modal */}
             {ddModalOpen && (

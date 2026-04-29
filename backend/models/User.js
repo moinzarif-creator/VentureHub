@@ -44,7 +44,7 @@ const userSchema = new mongoose.Schema({
     },
     verificationStatus: {
         type: String,
-        enum: ['unverified', 'pending', 'approved', 'rejected'],
+        enum: ['unverified', 'pending', 'verified', 'Verified', 'rejected'],
         default: 'unverified'
     },
     kycVideoUrl: {

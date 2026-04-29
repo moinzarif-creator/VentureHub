@@ -74,7 +74,7 @@ module.exports = {
         }
         return io;
     },
-    createNotification: async (senderId, receiverId, type, referenceId, message) => {
+    createNotification: async (senderId, receiverId, type, referenceId, message, link) => {
         try {
             // Prevent self-notifications
             if (senderId && senderId.toString() === receiverId.toString()) return null;
@@ -84,7 +84,8 @@ module.exports = {
                 receiver: receiverId,
                 type,
                 referenceId,
-                message
+                message,
+                link
             });
 
             const savedNotification = await newNotification.save();

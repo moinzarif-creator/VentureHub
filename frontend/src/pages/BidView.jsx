@@ -12,6 +12,8 @@ const BidView = () => {
     const [error, setError] = useState('');
     const [actionLoading, setActionLoading] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
+    const [acceptModalOpen, setAcceptModalOpen] = useState(false);
+    const [rejectModalOpen, setRejectModalOpen] = useState(false);
 
     useEffect(() => {
         const fetchBidAndUser = async () => {
@@ -40,8 +42,7 @@ const BidView = () => {
     }, [id]);
 
     const handleAcceptDeal = async () => {
-        if (!window.confirm("Are you sure you want to ACCEPT this deal? This will finalize the funding and reject all other pending bids.")) return;
-        
+        setAcceptModalOpen(false);
         setActionLoading(true);
         try {
             const token = localStorage.getItem('token');
@@ -59,8 +60,7 @@ const BidView = () => {
     };
 
     const handleRejectDeal = async () => {
-        if (!window.confirm("Are you sure you want to REJECT this deal? This action cannot be undone.")) return;
-
+        setRejectModalOpen(false);
         setActionLoading(true);
         try {
             const token = localStorage.getItem('token');
@@ -213,7 +213,7 @@ const BidView = () => {
                             <h3 className="text-center text-lg font-black text-gray-800 mb-6 uppercase tracking-widest">Finalize Decision</h3>
                             <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-2xl mx-auto">
                                 <button
-                                    onClick={handleRejectDeal}
+                                    onClick={() => setRejectModalOpen(true)}
                                     disabled={actionLoading}
                                     className="flex-1 bg-white border-2 border-red-500 text-red-600 hover:bg-red-50 font-black py-4 px-6 rounded-xl transition-all shadow-sm transform active:scale-95 flex justify-center items-center gap-2"
                                 >
@@ -221,7 +221,7 @@ const BidView = () => {
                                     Reject Deal
                                 </button>
                                 <button
-                                    onClick={handleAcceptDeal}
+                                    onClick={() => setAcceptModalOpen(true)}
                                     disabled={actionLoading}
                                     className="flex-1 bg-green-600 hover:bg-green-700 text-white font-black py-4 px-6 rounded-xl transition-all shadow-lg shadow-green-200 transform active:scale-95 flex justify-center items-center gap-2"
                                 >
@@ -234,6 +234,44 @@ const BidView = () => {
                     )}
                 </div>
             </div>
+
+            {/* Accept Deal Modal */}
+            {acceptModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 px-4">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-fade-in-up">
+                        <div className="p-8 text-center">
+                            <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                            </div>
+                            <h3 className="text-2xl font-black text-gray-900 mb-2">Accept Deal?</h3>
+                            <p className="text-gray-500 text-sm mb-6">Are you sure you want to ACCEPT this deal? This will finalize the funding and automatically reject all other pending bids.</p>
+                            <div className="flex gap-4">
+                                <button onClick={() => setAcceptModalOpen(false)} className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors">Cancel</button>
+                                <button onClick={handleAcceptDeal} className="flex-1 py-3 bg-green-600 text-white font-bold rounded-xl shadow-md shadow-green-200 hover:bg-green-700 transition-colors transform active:scale-95">Confirm Accept</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Reject Deal Modal */}
+            {rejectModalOpen && (
+                <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 px-4">
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-fade-in-up">
+                        <div className="p-8 text-center">
+                            <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </div>
+                            <h3 className="text-2xl font-black text-gray-900 mb-2">Reject Deal?</h3>
+                            <p className="text-gray-500 text-sm mb-6">Are you sure you want to REJECT this deal? This action cannot be undone.</p>
+                            <div className="flex gap-4">
+                                <button onClick={() => setRejectModalOpen(false)} className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl hover:bg-gray-200 transition-colors">Cancel</button>
+                                <button onClick={handleRejectDeal} className="flex-1 py-3 bg-red-600 text-white font-bold rounded-xl shadow-md shadow-red-200 hover:bg-red-700 transition-colors transform active:scale-95">Confirm Reject</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

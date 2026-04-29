@@ -143,8 +143,28 @@ router.put('/:id/final', authMiddleware, async (req, res) => {
             return res.status(403).json({ message: 'Not authorized to update this bid' });
         }
 
+        const { offerAmount, offerEquity, termsAndConditions } = req.body;
+
         bid.isFinalBid = true;
+        if (offerAmount) bid.offerAmount = Number(offerAmount);
+        if (offerEquity) bid.offerEquity = Number(offerEquity);
+        if (termsAndConditions !== undefined) bid.termsAndConditions = termsAndConditions;
+        
         await bid.save();
+
+        // Notify entrepreneur
+        const pitch = await Pitch.findById(bid.pitchId);
+        const actor = await User.findById(req.user.id);
+        if (pitch && actor) {
+            createNotification(
+                req.user.id, // sender
+                pitch.entrepreneurId, // receiver
+                'final_bid',
+                bid._id,
+                `${actor.name} submitted a Final Bid on your pitch: ${pitch.title}`,
+                '/bids-hub' // Deep link to Bids Hub
+            );
+        }
 
         res.json({ message: 'Bid marked as final', bid });
     } catch (error) {
@@ -180,9 +200,22 @@ router.post('/:id/accept', authMiddleware, async (req, res) => {
             return res.status(403).json({ message: 'Not authorized to accept bids for this pitch' });
         }
 
+        // Verification Gate (Safety)
+        const investor = await User.findById(bid.investorId).session(session);
+        const entrepreneur = await User.findById(pitch.entrepreneurId).session(session);
+
+        if (!investor || !entrepreneur || investor.verificationStatus !== 'verified' || entrepreneur.verificationStatus !== 'verified') {
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(403).json({ message: 'Both Entrepreneur and Investor must be verified to finalize this deal.' });
+        }
+
         // 1. Change the accepted Bid's dealStatus to 'Accepted'
-        bid.dealStatus = 'Accepted';
-        await bid.save({ session });
+        const updatedBid = await Bid.findOneAndUpdate(
+            { _id: bid._id },
+            { $set: { dealStatus: 'Accepted' } },
+            { session, returnDocument: 'after' }
+        );
 
         // 2. Change all other pending Bids on this specific Pitch to dealStatus: 'Rejected'
         // Using dealStatus: { $ne: 'Accepted' } or simply missing dealStatus to be safe for legacy data
@@ -194,31 +227,46 @@ router.post('/:id/accept', authMiddleware, async (req, res) => {
         );
 
         // 3. Change the Pitch's fundingStatus to 'Funded'
-        pitch.fundingStatus = 'Funded';
-        await pitch.save({ session });
+        await Pitch.findOneAndUpdate(
+            { _id: pitch._id },
+            { $set: { fundingStatus: 'Funded' } },
+            { session, returnDocument: 'after' }
+        );
 
         // 4. Increment the winning Investor's closedDealsCount by +1
         // 5. Push the deal details to the winning Investor's investmentPortfolio array
-        const investor = await User.findById(bid.investorId).session(session);
         if (investor) {
-            investor.closedDealsCount = (investor.closedDealsCount || 0) + 1;
-            
-            // To ensure safe array access
-            if (!investor.investmentPortfolio) investor.investmentPortfolio = [];
-            
-            investor.investmentPortfolio.push({
-                pitchId: pitch._id,
-                amount: bid.offerAmount,
-                equity: bid.offerEquity,
-                date: new Date()
-            });
-            await investor.save({ session });
+            await User.findOneAndUpdate(
+                { _id: investor._id },
+                {
+                    $inc: { closedDealsCount: 1 },
+                    $push: {
+                        investmentPortfolio: {
+                            pitchId: pitch._id,
+                            amount: bid.offerAmount,
+                            equity: bid.offerEquity,
+                            date: new Date()
+                        }
+                    }
+                },
+                { session, returnDocument: 'after' }
+            );
         }
 
         await session.commitTransaction();
         session.endSession();
 
-        res.json({ message: 'Deal accepted successfully', bid });
+        // Notify winning investor
+        createNotification(
+            req.user.id,
+            bid.investorId,
+            'deal_accepted',
+            bid._id,
+            `Congratulations! ${entrepreneur ? entrepreneur.name : 'The entrepreneur'} accepted your deal for ${pitch.title}.`,
+            `/profile/${bid.investorId}` // Route to investor's profile or bid view
+        );
+
+        res.json({ message: 'Deal accepted successfully', bid: updatedBid });
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
@@ -288,6 +336,20 @@ router.put('/:id/reject', authMiddleware, async (req, res) => {
 
         bid.dealStatus = 'Rejected';
         await bid.save();
+
+        // Notify investor
+        const actor = await User.findById(req.user.id);
+        const pitch = await Pitch.findById(bid.pitchId);
+        if (actor && pitch) {
+            createNotification(
+                req.user.id,
+                bid.investorId,
+                'deal_rejected',
+                bid._id,
+                `${actor.name} rejected your bid for ${pitch.title}.`,
+                `/profile/${bid.investorId}`
+            );
+        }
 
         res.json({ message: 'Bid rejected', bid });
     } catch (error) {
